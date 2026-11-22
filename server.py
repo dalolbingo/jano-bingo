@@ -161,7 +161,8 @@ def seed_bots(r):
   offsets = sorted(rng.sample(range(1, 56), bot_count))
   names = rng.sample(BOT_NAMES, bot_count)
   r['bot_queue'] = [{'name': name, 'at': offset} for name, offset in zip(names, offsets)]
-  r['bot_start_at'] = None
+  # Begin the staggered bot selection immediately when this round is seeded.
+  r['bot_start_at'] = time.time()
   r['bot_index'] = 0
 for room in rooms.values():
   seed_bots(room)
@@ -207,10 +208,9 @@ def game_loop():
     now = time.time()
     with room_lock:
       for r in rooms.values():
-        # Start the staggered bot-card selection only after a real player joins this room.
-        if real_players(r) > 0 and r['bot_start_at'] is None:
-          r['bot_start_at'] = now
-        if r['bot_start_at'] is not None and r['phase'] in ('WAITING', 'COUNTDOWN') and real_players(r) > 0:
+        # Bots begin selecting cards automatically as soon as a round is seeded,
+        # even when no real player has joined yet.
+        if r['bot_start_at'] is not None and r['phase'] in ('WAITING', 'COUNTDOWN'):
           elapsed = now - r['bot_start_at']
           while r['bot_index'] < len(r['bot_queue']) and elapsed >= r['bot_queue'][r['bot_index']]['at']:
             used = set(r['cards'])
@@ -223,9 +223,7 @@ def game_loop():
             r['bot_index'] += 1
         pc = n_players(r)
         if r['phase'] in ('WAITING', 'COUNTDOWN') and real_players(r) == 0:
-          if r['bot_start_at'] is not None:
-            r['cards'] = {k: v for k, v in r['cards'].items() if v['uid'] > 0}
-            seed_bots(r)
+          # Keep the bots' staggered reservations; only real players can trigger a game.
           r.update({'phase': 'WAITING', 'countdown': CD_SEC, 'tick': now})
         elif r['phase'] == 'WAITING' and pc >= max(3, MIN_PLAYERS) and real_players(r) >= 1:
           r.update({'phase': 'COUNTDOWN', 'countdown': CD_SEC, 'tick': now})
