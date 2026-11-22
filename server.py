@@ -12,11 +12,11 @@ TOKEN = os.environ.get('BOT_TOKEN', '').strip().strip("'\"")
 try: ADMIN_ID = int(os.environ.get('ADMIN_ID', '0').strip().strip("'\"") or '0')
 except Exception: ADMIN_ID = 0
 
-DEFAULT_URL = 'https://royal-bingo-0ip6.onrender.com'
+DEFAULT_URL = 'https://jano-bingo-e8m6.onrender.com'
 APP_URL = (os.environ.get('APP_URL') or DEFAULT_URL).strip().strip("'\"").rstrip('/')
 APP_URL = ('https://' + APP_URL[8:]) if APP_URL.lower().startswith('https://') else DEFAULT_URL
 
-SUPPORT = os.environ.get('SUPPORT_USERNAME', '@royal_bingo_99_Support')
+SUPPORT = os.environ.get('SUPPORT_USERNAME', '@JanoBingoSupportBot')
 TB_NAME = os.environ.get('TELEBIRR_NAME', 'SINSHAW JEMANEH ESHETE')
 TB_PHONE = os.environ.get('TELEBIRR_PHONE', '0941882333')
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip().strip("'\"")
