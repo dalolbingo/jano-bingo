@@ -166,15 +166,19 @@ def seed_bots(r):
 for room in rooms.values():
   seed_bots(room)
 real_players = lambda r: len({v['uid'] for v in r['cards'].values() if v['uid'] > 0})
-n_players = lambda r: real_players(r) + (1 if any(v.get('is_bot') for v in r['cards'].values()) else 0)
-paid_cards = lambda r: sum(1 for v in r['cards'].values() if not v.get('is_bot'))
+bot_players = lambda r: sum(1 for v in r['cards'].values() if v.get('is_bot'))
+n_players = lambda r: real_players(r) + bot_players(r)
+# Every reserved card contributes its room stake, including bot cards paid with virtual credits.
+paid_cards = lambda r: len(r['cards'])
 derash = lambda r: round(paid_cards(r) * r['stake'] * (1.0 - HOUSE_CUT), 2)
 
 def finish_round(r, uid, name, cno, wl):
   prize = derash(r)
   is_bot = uid < 0
   if is_bot:
-    comm = round(paid_cards(r) * r['stake'], 2)
+    # Bot reservations contribute to the same 20% commission and 80% derash calculation.
+    # The derash is not paid when a bot wins, but the round still ends without refunds.
+    comm = round(paid_cards(r) * r['stake'] - prize, 2)
     with get_db() as c:
       c.execute('UPDATE house_stats SET total_commission=total_commission+?, total_rounds=total_rounds+1 WHERE id=1', (comm,))
       c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
