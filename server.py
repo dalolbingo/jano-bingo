@@ -192,13 +192,19 @@ def game_loop():
                   c.execute('UPDATE users SET matches_played=matches_played+1 WHERE uid=?', (uid,))
         elif r['phase'] == 'PLAYING' and now - r['tick'] >= CALL_SEC:
           r['tick'] = now
-          if r['deck']: r['called'].insert(0, r['deck'].pop())
-          else:
+          if r['deck']:
+            r['called'].insert(0, r['deck'].pop())
+            # Check every card immediately after each called number.
+            # The first completed card ends the round and receives the prize automatically.
             cs, won = set(r['called']), False
             for cno, info in r['cards'].items():
               wl = check_win(info['grid'], cs)
-              if wl: finish_round(r, info['uid'], info['name'], cno, wl); won = True; break
-            if not won: reset_room(r)
+              if wl:
+                finish_round(r, info['uid'], info['name'], cno, wl)
+                won = True
+                break
+          else:
+            reset_room(r)
         elif r['phase'] == 'WINNER' and now >= r['win_until']:
           reset_room(r)
     time.sleep(0.35)
