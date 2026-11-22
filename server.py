@@ -425,6 +425,8 @@ if bot:
         elif rt == 'dep':
           c.execute("UPDATE requests SET status='rejected' WHERE id=?", (int(rid),))
           bot.edit_message_text(call.message.text + '\n\n❌ ተሰርዟል', call.message.chat.id, call.message.message_id)
+          try: bot.send_message(uid, f'❌ የ {amt:.2f} ETB ገቢ ጥያቄዎ ተቀባይነት አላገኘም። እባክዎ አድሚንን ያነጋግሩ።')
+          except Exception: pass
         elif rt == 'wd' and act == 'ap':
           c.execute("UPDATE requests SET status='paid' WHERE id=?", (int(rid),))
           bot.edit_message_text(call.message.text + f'\n\n✅ ተልኳል ({amt:.2f} ETB)', call.message.chat.id, call.message.message_id)
