@@ -149,20 +149,24 @@ WIN_LINES = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22
              [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
              [0,6,12,18,24],[4,8,12,16,20],[0,4,20,24]]
 check_win = lambda g, cs: next((ln for ln in WIN_LINES if all(g[i] == 'FREE' or g[i] in cs for i in ln)), None)
-mk_room = lambda s: {'stake': s, 'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'tick': time.time(), 'winner': None, 'win_until': 0.0}
+mk_room = lambda s: {'stake': s, 'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'tick': time.time(), 'winner': None, 'win_until': 0.0, 'last_bot_count': 0}
 rooms = {10: mk_room(10), 20: mk_room(20), 50: mk_room(50)}
-BOT_NAMES = ['Abel','Hana','Dawit','Selam','Meron','Natnael','Liya','Bereket','Rahel','Yonatan','Eden','Sami','Tigist','Mikiyas','Meseret']
+BOT_NAMES = ['Abel','Hana','Dawit','Selam','Meron','Natnael','Liya','Bereket','Rahel','Yonatan','Eden','Sami','Tigist','Mikiyas','Meseret','Amanuel','Hirut','Fitsum','Biniam','Martha','Robel','Saron','Henok','Bethlehem','Yared']
 def seed_bots(r):
   used = set(r['cards'])
   available = [n for n in range(1, 401) if n not in used]
-  for i, name in enumerate(BOT_NAMES):
-    cno = random.SystemRandom().choice(available)
+  rng = random.SystemRandom()
+  counts = [n for n in range(15, 21) if n != r.get('last_bot_count')]
+  bot_count = rng.choice(counts)
+  r['last_bot_count'] = bot_count
+  for i, name in enumerate(rng.sample(BOT_NAMES, bot_count)):
+    cno = rng.choice(available)
     available.remove(cno)
     r['cards'][cno] = {'uid': -(i + 1), 'name': name + ' (BOT)', 'grid': gen_card(cno), 'is_bot': True}
 for room in rooms.values():
   seed_bots(room)
-n_players = lambda r: len({v['uid'] for v in r['cards'].values()})
 real_players = lambda r: len({v['uid'] for v in r['cards'].values() if v['uid'] > 0})
+n_players = lambda r: real_players(r) + (1 if any(v.get('is_bot') for v in r['cards'].values()) else 0)
 paid_cards = lambda r: sum(1 for v in r['cards'].values() if not v.get('is_bot'))
 derash = lambda r: round(paid_cards(r) * r['stake'] * (1.0 - HOUSE_CUT), 2)
 
@@ -548,10 +552,9 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
   with room_lock:
     my_c = sorted([k for k, v in r['cards'].items() if v['uid'] == u['uid']])
     tk_c = sorted([k for k, v in r['cards'].items() if v['uid'] != u['uid']])
-    bot_names = [v['name'] for v in r['cards'].values() if v.get('is_bot')]
     snap = {'stake': r['stake'], 'phase': r['phase'], 'countdown': r['countdown'], 'players': n_players(r),
-            'real_players': real_players(r), 'bot_count': len(bot_names), 'min_players': MIN_PLAYERS,
-            'total_cards': len(r['cards']), 'derash': derash(r), 'bot_names': bot_names,
+            'min_players': MIN_PLAYERS,
+            'total_cards': len(r['cards']), 'derash': derash(r),
             'taken_cards': tk_c, 'my_cards': my_c, 'my_boards': {str(n): r['cards'][n]['grid'] for n in my_c},
             'called': r['called'], 'winner': r['winner'], 'winner_left': max(0, int(r['win_until'] - time.time())) if r['phase'] == 'WINNER' else 0}
   with get_db() as c:
