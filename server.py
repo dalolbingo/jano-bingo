@@ -424,7 +424,7 @@ if bot:
       ensure_user(uid)
       with get_db() as c:
         if act == 'add': c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, uid)); add_tx(c, uid, '🎁', 'አድሚን ጨምሯል', amt)
-        else: c.execute('UPDATE users SET play_wallet=MAX(0,play_wallet-?) WHERE uid=?', (amt, uid)); add_tx(c, uid, '➖', 'አድሚን ቀንሷል', -amt)
+        else: c.execute('UPDATE users SET play_wallet=GREATEST(0,play_wallet-?) WHERE uid=?', (amt, uid)); add_tx(c, uid, '➖', 'አድሚን ቀንሷል', -amt)
         pw = c.execute('SELECT play_wallet FROM users WHERE uid=?', (uid,)).fetchone()[0]
       bot.reply_to(m, f'✅ ተስተካክሏል! ID `{uid}` Play: {pw:.2f} ETB', parse_mode='Markdown')
     except Exception: bot.reply_to(m, '❌ ምሳሌ፦ `528672685 100`', parse_mode='Markdown')
