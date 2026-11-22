@@ -552,7 +552,7 @@ function renderState(d) {
           var isF = v === 'FREE', isM = !isF && mk[v], isCU = !isF && !isM && calMap[v];
           var c = isF ? 'fr' : isM ? 'mk' : isCU ? 'cu' : '';
           return '<div class="pc ' + c + '" onclick="tapManual(' + no + ',' + (isF ? "'FREE'" : v) + ')">' + v + '</div>';
-        }).join('') + '</div>''</div>';
+        }).join('') + '</div></div>';
       }).join('');
     }
 
