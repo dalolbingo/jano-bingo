@@ -46,6 +46,7 @@ body.light .wchip{color:#b45309}
 .c-em{color:var(--em)}.c-blue{color:#60a5fa}.c-red{color:#f87171}
 .status-banner{background:rgba(37,99,235,.14);border:1px solid rgba(59,130,246,.35);border-radius:12px;padding:9px 12px;margin-bottom:10px;text-align:center;font-size:12px;font-weight:700;color:#93c5fd}
 .status-banner.counting{background:rgba(245,158,11,.16);border-color:var(--bdg);color:var(--gold2)}
+.demo-info{background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.35);border-radius:10px;padding:8px 10px;margin:-2px 0 10px;color:#34d399;font-size:10.5px;line-height:1.5;display:none;}
 body.light .status-banner{color:#1d4ed8}
 .sbar{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:6px 8px}
 .spills{display:flex;gap:5px}
@@ -163,7 +164,7 @@ body.light .status-banner{color:#1d4ed8}
       <img class="badge" src="/static/jano-bingo-icon.svg" alt="JANO BINGO" />
       <div>
         <div class="btitle">JANO BINGO</div>
-        <span class="live-pill">● LIVE REAL MONEY</span>
+        <span id="liveLabel" class="live-pill">● LIVE REAL MONEY</span>
       </div>
     </div>
     <div class="hact">
@@ -182,6 +183,8 @@ body.light .status-banner{color:#1d4ed8}
       </div>
 
       <div id="statusBanner" class="status-banner">⏳ እውነተኛ ተጫዋቾች በመጠበቅ ላይ... (ቢያንስ 2 ሰው ሲገባ ይጀምራል)</div>
+      <div id="demoInfo" class="demo-info"></div>
+      <div style="display:flex;justify-content:flex-end;margin:-2px 0 9px"><button id="modeBtn" class="apill off" onclick="toggleMode()">🎮 Demo Mode: OFF</button></div>
 
       <div class="sbar">
         <div class="spills">
@@ -213,6 +216,7 @@ body.light .status-banner{color:#1d4ed8}
         <div class="sbox"><div class="slbl">PLAYERS</div><div id="pPly" class="sval c-blue">0</div></div>
         <div class="sbox"><div class="slbl">CALLS</div><div id="pCal" class="sval">0</div></div>
       </div>
+      <div id="demoPlayInfo" class="demo-info"></div>
       <div class="playlay">
         <div class="mstr">
           <div class="bhdr"><div class="ch cB">B</div><div class="ch cI">I</div><div class="ch cN">N</div><div class="ch cG">G</div><div class="ch cO">O</div></div>
@@ -327,7 +331,7 @@ if (tg) {
   try { tg.ready(); tg.expand(); initData = tg.initData || ''; } catch (e) {}
 }
 
-var stake = 10, soundOn = true, autoMark = true;
+var stake = 10, soundOn = true, autoMark = true, mode = 'real';
 var lastCalledBall = null, lastWinnerCard = null, manualMarks = {};
 var latestState = null, busy = false, tTmr = null;
 var voiceAudio = new Audio(), actx = null;
@@ -447,7 +451,16 @@ function checkWinLocal(grid, markMap) {
 
 function renderState(d) {
   latestState = d;
-  var u = d.user, r = d.room, cfg = d.config;
+  var u = d.user, r = d.room, cfg = d.config, isDemo = r.mode === 'demo';
+  document.getElementById('liveLabel').textContent = isDemo ? '● FREE DEMO' : '● LIVE REAL MONEY';
+  document.getElementById('modeBtn').textContent = isDemo ? '🎮 Demo Mode: ON' : '🎮 Demo Mode: OFF';
+  document.getElementById('modeBtn').classList.toggle('off', !isDemo);
+  var demoText = isDemo ? 'FREE PRACTICE · NO DEPOSITS OR PRIZES · 15 DEMO BOTS: ' + (r.demo_bots || []).map(function(n) { return n.replace(' (DEMO BOT)', ''); }).join(', ') : '';
+  ['demoInfo','demoPlayInfo'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.textContent = demoText;
+    el.style.display = isDemo ? 'block' : 'none';
+  });
   document.getElementById('hBal').textContent = u.play_wallet.toFixed(2);
   document.getElementById('lWal').textContent = u.play_wallet.toFixed(2);
   document.getElementById('walletVal').textContent = u.play_wallet.toFixed(2) + ' ETB';
@@ -475,12 +488,12 @@ function renderState(d) {
       tEl.textContent = 'WAIT';
       tEl.className = 'sval c-blue';
       ban.className = 'status-banner';
-      ban.textContent = '⏳ ተጫዋቾች በመጠበቅ ላይ (' + r.players + ' / ' + r.min_players + ' ሰው) — ቢያንስ ' + r.min_players + ' ተጫዋቾች ካርድ ሲገዙ ይጀምራል';
+      ban.textContent = isDemo ? '🎮 ነፃ የልምምድ ጨዋታ — 15 የሙከራ ቦቶች አሉ። ካርድ ይምረጡ!' : '⏳ ተጫዋቾች በመጠበቅ ላይ (' + r.players + ' / ' + r.min_players + ' ሰው) — ቢያንስ ' + r.min_players + ' ተጫዋቾች ካርድ ሲገዙ ይጀምራል';
     } else {
       tEl.textContent = r.countdown + 's';
       tEl.className = 'sval' + (r.countdown <= 5 ? ' c-red' : ' c-gold');
       ban.className = 'status-banner counting';
-      ban.textContent = '🔥 ጨዋታው በ ' + r.countdown + ' ሰከንድ ውስጥ ይጀምራል! ካርድ ይምረጡ';
+      ban.textContent = (isDemo ? '🎮 DEMO ዙር በ ' : '🔥 ጨዋታው በ ') + r.countdown + ' ሰከንድ ውስጥ ይጀምራል! ካርድ ይምረጡ';
     }
 
     document.getElementById('selLbl').textContent = 'ካርዶችዎ፡ ' + r.my_cards.length + ' / 4';
@@ -506,7 +519,7 @@ function renderState(d) {
   } else if (r.phase === 'PLAYING' || r.phase === 'WINNER') {
     document.getElementById('lobbyView').style.display = 'none';
     document.getElementById('playView').style.display = 'block';
-    document.getElementById('pDer').textContent = r.derash;
+    document.getElementById('pDer').textContent = isDemo ? '0 · DEMO' : r.derash;
     document.getElementById('pPly').textContent = r.players;
     document.getElementById('pCal').textContent = r.called.length;
 
@@ -562,8 +575,9 @@ function renderState(d) {
         lastWinnerCard = w.card_no;
         playVoice('bingo', 'Bingo!', 880);
       }
+      document.getElementById('wttl').textContent = isDemo ? '🎮 DEMO ROUND ENDED' : '🏆 BINGO! 🏆';
       document.getElementById('wName').textContent = '👑 ' + w.name + ' #' + w.card_no;
-      document.getElementById('wPrz').textContent = w.prize + ' ETB';
+      document.getElementById('wPrz').textContent = isDemo ? 'NO PRIZE · FREE PRACTICE' : w.prize + ' ETB';
       document.getElementById('wLbl').textContent = w.name + ' (CARD #' + w.card_no + ')';
       document.getElementById('wGrd').innerHTML = w.grid.map(function(v, idx) {
         var c = w.win_line.indexOf(idx) > -1 ? 'wl' : (v === 'FREE' || calMap[v]) ? 'cal' : '';
@@ -606,7 +620,7 @@ async function pollState() {
     return;
   }
   try {
-    var data = await apiReq('/api/state?stake=' + stake);
+    var data = await apiReq('/api/state?stake=' + stake + '&mode=' + mode);
     renderState(data);
   } catch (e) {}
 }
@@ -616,9 +630,9 @@ async function buyCard(no) {
   busy = true;
   ensureAudioUnlocked();
   try {
-    var res = await apiReq('/api/buy_card', 'POST', { stake: stake, card_no: no });
+    var res = await apiReq('/api/buy_card', 'POST', { stake: stake, card_no: no, mode: mode });
     beep(res.action === 'bought' ? 680 : 400, 0.08);
-    toast(res.action === 'bought' ? '✅ ካርድ #' + no + ' ተገዝቷል!' : '↩️ ካርድ #' + no + ' ተሰርዟል፤ ብሩ ተመልሷል።');
+    toast(mode === 'demo' ? (res.action === 'bought' ? '🎮 ነፃ የልምምድ ካርድ ተይዟል!' : '↩️ የልምምድ ካርድ ተሰርዟል።') : (res.action === 'bought' ? '✅ ካርድ #' + no + ' ተገዝቷል!' : '↩️ ካርድ #' + no + ' ተሰርዟል፤ ብሩ ተመልሷል።'));
     await pollState();
   } catch (e) { toast('❌ ' + e.message); }
   busy = false;
@@ -671,6 +685,10 @@ async function sendWd() {
   } catch (e) { toast('❌ ' + e.message); }
 }
 
+function toggleMode() {
+  mode = mode === 'real' ? 'demo' : 'real';
+  pollState();
+}
 function setStake(s) {
   stake = s;
   document.querySelectorAll('.spill').forEach(function(b) { b.classList.toggle('on', Number(b.getAttribute('data-s')) === s); });
