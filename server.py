@@ -495,6 +495,7 @@ app = FastAPI(title='JANO BINGO Live')
 allowed_origins = [x.strip().rstrip('/') for x in os.environ.get('CORS_ORIGINS', APP_URL).split(',') if x.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_methods=['GET', 'POST'], allow_headers=['Content-Type', 'X-Tg-Init-Data'])
 if os.path.isdir('sounds'): app.mount('/sounds', StaticFiles(directory='sounds'), name='sounds')
+if os.path.isdir('static'): app.mount('/static', StaticFiles(directory='static'), name='static')
 
 @app.on_event('startup')
 def on_startup():
