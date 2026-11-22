@@ -151,16 +151,16 @@ WIN_LINES = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22
 check_win = lambda g, cs: next((ln for ln in WIN_LINES if all(g[i] == 'FREE' or g[i] in cs for i in ln)), None)
 mk_room = lambda s: {'stake': s, 'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'tick': time.time(), 'winner': None, 'win_until': 0.0}
 rooms = {10: mk_room(10), 20: mk_room(20), 50: mk_room(50)}
-DEMO_BOT_NAMES = ['Abel','Hana','Dawit','Selam','Meron','Natnael','Liya','Bereket','Rahel','Yonatan','Eden','Sami','Tigist','Mikiyas','Meseret']
-def seed_demo_bots(r):
+BOT_NAMES = ['Abel','Hana','Dawit','Selam','Meron','Natnael','Liya','Bereket','Rahel','Yonatan','Eden','Sami','Tigist','Mikiyas','Meseret']
+def seed_bots(r):
   used = set(r['cards'])
   available = [n for n in range(1, 401) if n not in used]
-  for i, name in enumerate(DEMO_BOT_NAMES):
+  for i, name in enumerate(BOT_NAMES):
     cno = random.SystemRandom().choice(available)
     available.remove(cno)
     r['cards'][cno] = {'uid': -(i + 1), 'name': name + ' (BOT)', 'grid': gen_card(cno), 'is_bot': True}
 for room in rooms.values():
-  seed_demo_bots(room)
+  seed_bots(room)
 n_players = lambda r: len({v['uid'] for v in r['cards'].values()})
 real_players = lambda r: len({v['uid'] for v in r['cards'].values() if v['uid'] > 0})
 paid_cards = lambda r: sum(1 for v in r['cards'].values() if not v.get('is_bot'))
@@ -192,7 +192,7 @@ def reset_room(r):
   with get_db() as c:
     c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
   r.update({'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'winner': None, 'tick': time.time()})
-  seed_demo_bots(r)
+  seed_bots(r)
 
 def game_loop():
   while True:
@@ -219,7 +219,7 @@ def game_loop():
           if r['deck']:
             r['called'].insert(0, r['deck'].pop())
             # Check every card immediately after each called number.
-            # The first completed card ends the round and receives the prize automatically.
+            # The first completed card ends the round; bots receive no payout.
             cs, won = set(r['called']), False
             candidates = list(r['cards'].items())
             random.SystemRandom().shuffle(candidates)
@@ -571,26 +571,24 @@ async def api_buy(req: Request, x_tg_init_data: str = Header(default='')):
     if r['phase'] not in ('WAITING', 'COUNTDOWN'): raise HTTPException(400, 'ጨዋታው ተጀምሯል!')
     if cno in r['cards']:
       if r['cards'][cno]['uid'] == u['uid']:
-        if not r.get('demo'):
-          with get_db() as c:
-            c.execute('BEGIN IMMEDIATE')
-            c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (st, u['uid']))
-            add_tx(c, u['uid'], '↩️', f'ካርድ #{cno} ተሰርዟል', st)
-            c.execute('DELETE FROM room_cards WHERE stake=? AND card_no=? AND uid=?', (st, cno, u['uid']))
+        with get_db() as c:
+          c.execute('BEGIN IMMEDIATE')
+          c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (st, u['uid']))
+          add_tx(c, u['uid'], '↩️', f'ካርድ #{cno} ተሰርዟል', st)
+          c.execute('DELETE FROM room_cards WHERE stake=? AND card_no=? AND uid=?', (st, cno, u['uid']))
         del r['cards'][cno]
         return {'ok': True, 'action': 'removed'}
       raise HTTPException(400, f'ካርድ #{cno} ተይዟል!')
     if sum(1 for v in r['cards'].values() if v['uid'] == u['uid']) >= 4: raise HTTPException(400, 'እስከ 4 ካርድ ብቻ!')
     grid = gen_card(cno)
-    if not r.get('demo'):
-      with get_db() as c:
-        c.execute('BEGIN IMMEDIATE')
-        wallet = c.execute('SELECT play_wallet FROM users WHERE uid=?', (u['uid'],)).fetchone()
-        if not wallet or wallet['play_wallet'] < st: raise HTTPException(400, 'በቂ ባላንስ የለዎትም! ገቢ ያድርጉ።')
-        c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=?', (st, u['uid']))
-        add_tx(c, u['uid'], '🎴', f'ካርድ #{cno} ({st} ብር)', -st)
-        c.execute('INSERT INTO room_cards (stake,card_no,uid,name,grid) VALUES (?,?,?,?,?)',
-                  (st, cno, u['uid'], u['name'], json.dumps(grid)))
+    with get_db() as c:
+      c.execute('BEGIN IMMEDIATE')
+      wallet = c.execute('SELECT play_wallet FROM users WHERE uid=?', (u['uid'],)).fetchone()
+      if not wallet or wallet['play_wallet'] < st: raise HTTPException(400, 'በቂ ባላንስ የለዎትም! ገቢ ያድርጉ።')
+      c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=?', (st, u['uid']))
+      add_tx(c, u['uid'], '🎴', f'ካርድ #{cno} ({st} ብር)', -st)
+      c.execute('INSERT INTO room_cards (stake,card_no,uid,name,grid) VALUES (?,?,?,?,?)',
+                (st, cno, u['uid'], u['name'], json.dumps(grid)))
     r['cards'][cno] = {'uid': u['uid'], 'name': u['name'], 'grid': grid}
     return {'ok': True, 'action': 'bought'}
 
