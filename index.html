@@ -478,7 +478,7 @@ function renderState(d) {
     manualMarks = {};
 
     document.getElementById('lDer').textContent = r.derash;
-    document.getElementById('lPly').textContent = r.players + '/' + r.min_players;
+    document.getElementById('lPly').textContent = r.real_players + ' + ' + r.bot_count;
     var tEl = document.getElementById('lTmr');
     var ban = document.getElementById('statusBanner');
     if (r.phase === 'WAITING') {
@@ -517,7 +517,7 @@ function renderState(d) {
     document.getElementById('lobbyView').style.display = 'none';
     document.getElementById('playView').style.display = 'block';
     document.getElementById('pDer').textContent = r.derash;
-    document.getElementById('pPly').textContent = r.players;
+    document.getElementById('pPly').textContent = r.real_players + ' + ' + r.bot_count;
     document.getElementById('pCal').textContent = r.called.length;
 
     var calMap = {};
