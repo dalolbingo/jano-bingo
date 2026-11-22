@@ -311,7 +311,7 @@ if bot:
   @bot.message_handler(commands=['deposit'])
   @bot.message_handler(func=lambda m: m.text == '💰 ገቢ (Deposit)')
   def c_dep(m):
-    kb = IKB(); kb.row(IBtn('📲 TeleBirr', callback_data='dep_TeleBirr'), IBtn('🏦 CBE', callback_data='dep_CBE'))
+    kb = IKB(); kb.row(IBtn('📲 TeleBirr', callback_data='dep_TeleBirr'), IBtn('🏦 Cbe Birr', callback_data='dep_CBE'))
     bot.send_message(m.chat.id, '💳 የክፍያ አማራጭ ይምረጡ፦', reply_markup=kb)
 
   @bot.callback_query_handler(func=lambda c: c.data in ('dep_TeleBirr', 'dep_CBE'))
@@ -337,7 +337,7 @@ if bot:
   @bot.message_handler(commands=['withdraw'])
   @bot.message_handler(func=lambda m: m.text == '💸 ወጪ (Withdraw)')
   def c_wd(m):
-    kb = IKB(); kb.row(IBtn('📲 TeleBirr', callback_data='wd_TeleBirr'), IBtn('🏦 CBE', callback_data='wd_CBE'))
+    kb = IKB(); kb.row(IBtn('📲 TeleBirr', callback_data='wd_TeleBirr'), IBtn('🏦 Cbe Birr', callback_data='wd_CBE'))
     bot.send_message(m.chat.id, '💸 ወደ የትኛው አካውንት ማውጣት ይፈልጋሉ?', reply_markup=kb)
 
   @bot.callback_query_handler(func=lambda c: c.data in ('wd_TeleBirr', 'wd_CBE'))
