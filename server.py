@@ -222,14 +222,12 @@ def game_loop():
             r['cards'][cno] = {'uid': -(i + 1), 'name': name + ' (BOT)', 'grid': gen_card(cno), 'is_bot': True}
             r['bot_index'] += 1
         pc = n_players(r)
-        if r['phase'] in ('WAITING', 'COUNTDOWN') and real_players(r) == 0:
-          # Keep the bots' staggered reservations; only real players can trigger a game.
-          r.update({'phase': 'WAITING', 'countdown': CD_SEC, 'tick': now})
-        elif r['phase'] == 'WAITING' and pc >= max(3, MIN_PLAYERS) and real_players(r) >= 1:
+        # The first reserved card (bot or real player) starts the 60-second countdown.
+        # Bots may play a complete round without any real players.
+        if r['phase'] == 'WAITING' and pc >= 1:
           r.update({'phase': 'COUNTDOWN', 'countdown': CD_SEC, 'tick': now})
         elif r['phase'] == 'COUNTDOWN':
-          if pc < max(3, MIN_PLAYERS) or real_players(r) < 1: r.update({'phase': 'WAITING', 'countdown': CD_SEC})
-          elif now - r['tick'] >= 1.0:
+          if now - r['tick'] >= 1.0:
             r['tick'], r['countdown'] = now, r['countdown'] - 1
             if r['countdown'] <= 0:
               r.update({'phase': 'PLAYING', 'called': [], 'deck': list(range(1, 76)), 'tick': now})
