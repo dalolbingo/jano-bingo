@@ -556,7 +556,8 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
             'min_players': MIN_PLAYERS,
             'total_cards': len(r['cards']), 'derash': derash(r),
             'taken_cards': tk_c, 'my_cards': my_c, 'my_boards': {str(n): r['cards'][n]['grid'] for n in my_c},
-            'called': r['called'], 'winner': r['winner'], 'winner_left': max(0, int(r['win_until'] - time.time())) if r['phase'] == 'WINNER' else 0}
+            'called': r['called'], 'winner': ({'is_bot': True, 'prize': 0.0} if r['winner'] and r['winner'].get('is_bot') else r['winner']),
+            'winner_left': max(0, int(r['win_until'] - time.time())) if r['phase'] == 'WINNER' else 0}
   with get_db() as c:
     txs = [dict(x) for x in c.execute('SELECT icon,title,amount,created_at FROM transactions WHERE uid=? ORDER BY id DESC LIMIT 25', (u['uid'],)).fetchall()]
     top = [dict(x) for x in c.execute('SELECT name,total_won FROM users WHERE total_won>0 ORDER BY total_won DESC LIMIT 10').fetchall()]
