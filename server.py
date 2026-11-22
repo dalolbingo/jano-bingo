@@ -386,7 +386,7 @@ if bot:
       act, rt, rid = d.split('_')
       with get_db() as c:
         c.execute('BEGIN IMMEDIATE')
-        rq = c.execute('SELECT * FROM requests WHERE id=?', (int(rid),)).fetchone()
+        rq = c.execute('SELECT * FROM requests WHERE id=? FOR UPDATE', (int(rid),)).fetchone()
         if not rq or rq['status'] != 'pending': return bot.send_message(call.message.chat.id, '⚠️ ቀድሞ ተወስኗል።')
         uid, amt = rq['uid'], rq['amount']
         if rt == 'dep' and act == 'ap':
