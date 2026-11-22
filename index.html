@@ -452,11 +452,10 @@ function renderState(d) {
   latestState = d;
   var u = d.user, r = d.room, cfg = d.config;
   document.getElementById('liveLabel').textContent = '● NEON TEST';
-  var botText = '🤖 BOTS IN THIS ROOM: ' + (r.bot_names || []).map(function(n) { return n.replace(' (BOT)', ''); }).join(', ') + ' · Bot wins end the round with no payout or refunds.';
   ['demoInfo','demoPlayInfo'].forEach(function(id) {
     var el = document.getElementById(id);
-    el.textContent = botText;
-    el.style.display = 'block';
+    el.textContent = '';
+    el.style.display = 'none';
   });
   document.getElementById('hBal').textContent = u.play_wallet.toFixed(2);
   document.getElementById('lWal').textContent = u.play_wallet.toFixed(2);
@@ -478,14 +477,14 @@ function renderState(d) {
     manualMarks = {};
 
     document.getElementById('lDer').textContent = r.derash;
-    document.getElementById('lPly').textContent = r.real_players + ' + ' + r.bot_count;
+    document.getElementById('lPly').textContent = r.players;
     var tEl = document.getElementById('lTmr');
     var ban = document.getElementById('statusBanner');
     if (r.phase === 'WAITING') {
       tEl.textContent = 'WAIT';
       tEl.className = 'sval c-blue';
       ban.className = 'status-banner';
-      ban.textContent = '⏳ እውነተኛ ተጫዋቾችን በመጠበቅ ላይ (' + r.real_players + ' real + ' + r.bot_count + ' bots). ተጫዋች ካርድ ሲይዝ ይጀምራል።';
+      ban.textContent = '⏳ ተጫዋቾችን በመጠበቅ ላይ (' + r.players + ' / ' + r.min_players + '). ካርድ ሲያዙ ይጀምራል።';
     } else {
       tEl.textContent = r.countdown + 's';
       tEl.className = 'sval' + (r.countdown <= 5 ? ' c-red' : ' c-gold');
@@ -517,7 +516,7 @@ function renderState(d) {
     document.getElementById('lobbyView').style.display = 'none';
     document.getElementById('playView').style.display = 'block';
     document.getElementById('pDer').textContent = r.derash;
-    document.getElementById('pPly').textContent = r.real_players + ' + ' + r.bot_count;
+    document.getElementById('pPly').textContent = r.players;
     document.getElementById('pCal').textContent = r.called.length;
 
     var calMap = {};
