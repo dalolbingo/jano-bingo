@@ -230,15 +230,15 @@ body.light .status-banner{color:#1d4ed8}
   <section id="tab-wallet" class="tab">
     <div class="scard">
       <div class="shd"><span>💼 የሂሳብ ማጠቃለያ (Real Wallet)</span></div>
-      <div class="wdual">
-        <div class="wsub"><div class="l">🎮 PLAY WALLET</div><div id="pwVal" class="a c-em">0.00</div><div class="h">ለመጫወቻ</div></div>
-        <div class="wsub"><div class="l">🏆 WIN WALLET</div><div id="wwVal" class="a c-gold">0.00</div><div class="h">ለማውጣት ዝግጁ</div></div>
+      <div class="wsub" style="margin-bottom:12px">
+        <div class="l">💰 የእርስዎ ጠቅላላ ባላንስ</div>
+        <div id="walletVal" class="a c-gold">0.00 ETB</div>
+        <div class="h">ለጨዋታ እና ለወጪ የሚጠቀሙበት አንድ ባላንስ</div>
       </div>
       <div class="wact">
         <button class="btnd" onclick="openDrw('dep')">↓ ገቢ (DEPOSIT)</button>
         <button class="btnw" onclick="openDrw('wd')">↑ ወጪ (WITHDRAW)</button>
       </div>
-      <button class="qbtn" style="width:100%;margin-top:9px;padding:9px" onclick="winToPlay()">🔄 ከ Win Wallet ወደ Play Wallet ቀይር</button>
 
       <div id="depDrw" class="drw">
         <div class="shd c-em">📲 የገቢ መመሪያ (TeleBirr / CBE)</div>
@@ -446,10 +446,9 @@ function checkWinLocal(grid, markMap) {
 function renderState(d) {
   latestState = d;
   var u = d.user, r = d.room, cfg = d.config;
-  document.getElementById('hBal').textContent = (u.play_wallet + u.win_wallet).toFixed(2);
+  document.getElementById('hBal').textContent = u.play_wallet.toFixed(2);
   document.getElementById('lWal').textContent = u.play_wallet.toFixed(2);
-  document.getElementById('pwVal').textContent = u.play_wallet.toFixed(2);
-  document.getElementById('wwVal').textContent = u.win_wallet.toFixed(2);
+  document.getElementById('walletVal').textContent = u.play_wallet.toFixed(2) + ' ETB';
   document.getElementById('prName').textContent = u.name;
   document.getElementById('prId').textContent = u.uid;
   document.getElementById('prPly').textContent = u.matches_played;
