@@ -105,8 +105,24 @@ def init_db():
       id INTEGER PRIMARY KEY CHECK (id=1),
       total_commission DOUBLE PRECISION DEFAULT 0,
       total_rounds INTEGER DEFAULT 0)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS room_cards (
+      stake INTEGER NOT NULL, card_no INTEGER NOT NULL, uid BIGINT NOT NULL,
+      name TEXT NOT NULL, grid TEXT NOT NULL,
+      PRIMARY KEY (stake, card_no))""")
     c.execute('INSERT INTO house_stats (id,total_commission,total_rounds) VALUES (1,0,0) ON CONFLICT (id) DO NOTHING')
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_requests_reference ON requests(reference) WHERE reference IS NOT NULL AND reference <> ''")
+
+def recover_interrupted_games():
+  # Any cards still recorded at startup belong to an unfinished round.
+  # Refund them atomically, then clear the persisted round-card records.
+  with get_db() as c:
+    rows = c.execute('SELECT stake,card_no,uid FROM room_cards').fetchall()
+    for row in rows:
+      cur = c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (row['stake'], row['uid']))
+      if cur.rowcount == 1:
+        add_tx(c, row['uid'], '↩️', f'የተቋረጠ ጨዋታ ካርድ #{row["card_no"]} ተመላሽ', row['stake'])
+    c.execute('DELETE FROM room_cards')
+  return len(rows)
 
 def ensure_user(uid, name='Player', ref=None):
   with get_db() as c:
@@ -143,10 +159,15 @@ def finish_round(r, uid, name, cno, wl):
     c.execute('UPDATE users SET win_wallet=win_wallet+?, wins=wins+1, total_won=total_won+? WHERE uid=?', (prize, prize, uid))
     add_tx(c, uid, '🏆', f'BINGO አሸነፉ! (Card #{cno})', prize)
     c.execute('UPDATE house_stats SET total_commission=total_commission+?, total_rounds=total_rounds+1 WHERE id=1', (comm,))
+    # Remove all cards in this completed round in the same transaction as payout.
+    c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
   r['phase'], r['win_until'] = 'WINNER', time.time() + WIN_SEC
   r['winner'] = {'uid': uid, 'name': name, 'card_no': cno, 'prize': prize, 'grid': r['cards'][cno]['grid'], 'win_line': wl}
 
 def reset_room(r):
+  # A round that ends without a winner must not be refunded on a later restart.
+  with get_db() as c:
+    c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
   r.update({'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'winner': None, 'tick': time.time()})
 
 def game_loop():
@@ -468,6 +489,8 @@ if os.path.isdir('sounds'): app.mount('/sounds', StaticFiles(directory='sounds')
 @app.on_event('startup')
 def on_startup():
   init_db()
+  refunded = recover_interrupted_games()
+  if refunded: print(f'Recovered interrupted game: refunded {refunded} card(s).')
   threading.Thread(target=game_loop, daemon=True).start()
   threading.Thread(target=run_bot, daemon=True).start()
 
@@ -513,16 +536,21 @@ async def api_buy(req: Request, x_tg_init_data: str = Header(default='')):
           c.execute('BEGIN IMMEDIATE')
           c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (st, u['uid']))
           add_tx(c, u['uid'], '↩️', f'ካርድ #{cno} ተሰርዟል', st)
+          c.execute('DELETE FROM room_cards WHERE stake=? AND card_no=? AND uid=?', (st, cno, u['uid']))
         del r['cards'][cno]
         return {'ok': True, 'action': 'removed'}
       raise HTTPException(400, f'ካርድ #{cno} ተይዟል!')
     if sum(1 for v in r['cards'].values() if v['uid'] == u['uid']) >= 4: raise HTTPException(400, 'እስከ 4 ካርድ ብቻ!')
+    grid = gen_card(cno)
     with get_db() as c:
       c.execute('BEGIN IMMEDIATE')
       wallet = c.execute('SELECT play_wallet FROM users WHERE uid=?', (u['uid'],)).fetchone()
       if not wallet or wallet['play_wallet'] < st: raise HTTPException(400, 'በቂ Play Wallet የለዎትም! ገቢ ያድርጉ።')
-      c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=?', (st, u['uid'])); add_tx(c, u['uid'], '🎴', f'ካርድ #{cno} ({st} ብር)', -st)
-    r['cards'][cno] = {'uid': u['uid'], 'name': u['name'], 'grid': gen_card(cno)}
+      c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=?', (st, u['uid']))
+      add_tx(c, u['uid'], '🎴', f'ካርድ #{cno} ({st} ብር)', -st)
+      c.execute('INSERT INTO room_cards (stake,card_no,uid,name,grid) VALUES (?,?,?,?,?)',
+                (st, cno, u['uid'], u['name'], json.dumps(grid)))
+    r['cards'][cno] = {'uid': u['uid'], 'name': u['name'], 'grid': grid}
     return {'ok': True, 'action': 'bought'}
 
 @app.post('/api/claim_bingo')
