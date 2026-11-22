@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<link rel="icon" type="image/svg+xml" href="/static/jano-bingo-icon.svg" />
+<link rel="apple-touch-icon" href="/static/jano-bingo-icon.svg" />
 <title>JANO BINGO LIVE</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -25,7 +27,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:syst
 .app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:74px;position:relative}
 .hdr{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--nav);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd)}
 .brand{display:flex;align-items:center;gap:9px}
-.badge{width:34px;height:34px;border-radius:10px;background:var(--ggrad);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 3px 12px rgba(245,158,11,.4)}
+.badge{width:40px;height:40px;border-radius:11px;object-fit:cover;display:block;box-shadow:0 3px 14px rgba(245,158,11,.45);border:1px solid rgba(255,215,80,.65)}
 .btitle{font-size:15px;font-weight:800;letter-spacing:.6px;color:var(--gold2)}
 body.light .btitle{color:#b45309}
 .live-pill{font-size:9px;font-weight:800;padding:2px 6px;border-radius:99px;background:rgba(16,185,129,.18);color:#34d399;border:1px solid rgba(16,185,129,.4)}
@@ -158,7 +160,7 @@ body.light .status-banner{color:#1d4ed8}
 <div id="appRoot" class="app">
   <header class="hdr">
     <div class="brand">
-      <div class="badge">👑</div>
+      <img class="badge" src="/static/jano-bingo-icon.svg" alt="JANO BINGO" />
       <div>
         <div class="btitle">JANO BINGO</div>
         <span class="live-pill">● LIVE REAL MONEY</span>
