@@ -156,7 +156,8 @@ def mk_demo_room(stake):
   room = mk_room(stake)
   room['demo'] = True
   return room
-demo_rooms = {10: mk_demo_room(10), 20: mk_demo_room(20), 50: mk_demo_room(50)}
+for room in rooms.values():
+  seed_demo_bots(room)
 def seed_demo_bots(r):
   used = set(r['cards'])
   available = [n for n in range(1, 401) if n not in used]
@@ -168,15 +169,21 @@ for demo_room in demo_rooms.values():
   seed_demo_bots(demo_room)
 n_players = lambda r: len({v['uid'] for v in r['cards'].values()})
 real_players = lambda r: len({v['uid'] for v in r['cards'].values() if v['uid'] > 0})
-derash = lambda r: 0.0 if r.get('demo') else round(len(r['cards']) * r['stake'] * (1.0 - HOUSE_CUT), 2)
+paid_cards = lambda r: sum(1 for v in r['cards'].values() if not v.get('is_bot'))
+derash = lambda r: round(paid_cards(r) * r['stake'] * (1.0 - HOUSE_CUT), 2)
 
 def finish_round(r, uid, name, cno, wl):
   prize = derash(r)
-  if r.get('demo'):
+  is_bot = uid < 0
+  if is_bot:
+    comm = round(paid_cards(r) * r['stake'], 2)
+    with get_db() as c:
+      c.execute('UPDATE house_stats SET total_commission=total_commission+?, total_rounds=total_rounds+1 WHERE id=1', (comm,))
+      c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
     r['phase'], r['win_until'] = 'WINNER', time.time() + WIN_SEC
-    r['winner'] = {'uid': uid, 'name': name, 'card_no': cno, 'prize': 0.0, 'grid': r['cards'][cno]['grid'], 'win_line': wl}
+    r['winner'] = {'uid': uid, 'name': name, 'card_no': cno, 'prize': 0.0, 'grid': r['cards'][cno]['grid'], 'win_line': wl, 'is_bot': True}
     return
-  comm = round(len(r['cards']) * r['stake'] - prize, 2)
+  comm = round(paid_cards(r) * r['stake'] - prize, 2)
   with get_db() as c:
     c.execute('UPDATE users SET play_wallet=play_wallet+?, wins=wins+1, total_won=total_won+? WHERE uid=?', (prize, prize, uid))
     add_tx(c, uid, '🏆', f'BINGO አሸነፉ! (Card #{cno})', prize)
@@ -184,39 +191,35 @@ def finish_round(r, uid, name, cno, wl):
     # Remove all cards in this completed round in the same transaction as payout.
     c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
   r['phase'], r['win_until'] = 'WINNER', time.time() + WIN_SEC
-  r['winner'] = {'uid': uid, 'name': name, 'card_no': cno, 'prize': prize, 'grid': r['cards'][cno]['grid'], 'win_line': wl}
+  r['winner'] = {'uid': uid, 'name': name, 'card_no': cno, 'prize': prize, 'grid': r['cards'][cno]['grid'], 'win_line': wl, 'is_bot': False}
 
 def reset_room(r):
-  if r.get('demo'):
-    r.update({'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'winner': None, 'tick': time.time()})
-    seed_demo_bots(r)
-    return
-  # A round that ends without a winner must not be refunded on a later restart.
+  # Clear completed round cards. Bot cards are memory-only and never enter the wallet database.
   with get_db() as c:
     c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
   r.update({'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'winner': None, 'tick': time.time()})
+  seed_demo_bots(r)
 
 def game_loop():
   while True:
     now = time.time()
     with room_lock:
-      for r in list(rooms.values()) + list(demo_rooms.values()):
+      for r in rooms.values():
         pc = n_players(r)
-        if r.get('demo') and r['phase'] in ('WAITING', 'COUNTDOWN') and real_players(r) == 0:
+        if r['phase'] in ('WAITING', 'COUNTDOWN') and real_players(r) == 0:
           r.update({'phase': 'WAITING', 'countdown': CD_SEC, 'tick': now})
-        elif r['phase'] == 'WAITING' and pc >= MIN_PLAYERS and (not r.get('demo') or real_players(r) >= 1):
+        elif r['phase'] == 'WAITING' and pc >= MIN_PLAYERS and real_players(r) >= 1:
           r.update({'phase': 'COUNTDOWN', 'countdown': CD_SEC, 'tick': now})
         elif r['phase'] == 'COUNTDOWN':
-          if pc < MIN_PLAYERS or (r.get('demo') and real_players(r) < 1): r.update({'phase': 'WAITING', 'countdown': CD_SEC})
+          if pc < MIN_PLAYERS or real_players(r) < 1: r.update({'phase': 'WAITING', 'countdown': CD_SEC})
           elif now - r['tick'] >= 1.0:
             r['tick'], r['countdown'] = now, r['countdown'] - 1
             if r['countdown'] <= 0:
               r.update({'phase': 'PLAYING', 'called': [], 'deck': list(range(1, 76)), 'tick': now})
               secrets.SystemRandom().shuffle(r['deck'])
-              if not r.get('demo'):
-                with get_db() as c:
-                  for uid in {v['uid'] for v in r['cards'].values() if v['uid'] > 0}:
-                    c.execute('UPDATE users SET matches_played=matches_played+1 WHERE uid=?', (uid,))
+              with get_db() as c:
+                for uid in {v['uid'] for v in r['cards'].values() if v['uid'] > 0}:
+                  c.execute('UPDATE users SET matches_played=matches_played+1 WHERE uid=?', (uid,))
         elif r['phase'] == 'PLAYING' and now - r['tick'] >= CALL_SEC:
           r['tick'] = now
           if r['deck']:
@@ -224,7 +227,9 @@ def game_loop():
             # Check every card immediately after each called number.
             # The first completed card ends the round and receives the prize automatically.
             cs, won = set(r['called']), False
-            for cno, info in r['cards'].items():
+            candidates = list(r['cards'].items())
+            random.SystemRandom().shuffle(candidates)
+            for cno, info in candidates:
               wl = check_win(info['grid'], cs)
               if wl:
                 finish_round(r, info['uid'], info['name'], cno, wl)
@@ -542,16 +547,17 @@ def head_root(): return Response(status_code=200)
 def serve_app(): return FileResponse('index.html') if os.path.exists('index.html') else HTMLResponse('index.html missing', 404)
 
 @app.get('/api/state')
-def api_state(stake: int = 10, mode: str = 'real', x_tg_init_data: str = Header(default='')):
+def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
   u = auth_user(x_tg_init_data)
-  if stake not in rooms or mode not in ('real', 'demo'): raise HTTPException(400, 'ልክ ያልሆነ የጨዋታ ክፍል!')
-  r = (demo_rooms if mode == 'demo' else rooms)[stake]
+  if stake not in rooms: raise HTTPException(400, 'ልክ ያልሆነ የጨዋታ ክፍል!')
+  r = rooms[stake]
   with room_lock:
     my_c = sorted([k for k, v in r['cards'].items() if v['uid'] == u['uid']])
     tk_c = sorted([k for k, v in r['cards'].items() if v['uid'] != u['uid']])
     bot_names = [v['name'] for v in r['cards'].values() if v.get('is_bot')]
-    snap = {'stake': r['stake'], 'phase': r['phase'], 'countdown': r['countdown'], 'players': real_players(r) if r.get('demo') else n_players(r),
-            'min_players': 1 if r.get('demo') else MIN_PLAYERS, 'total_cards': len(r['cards']), 'derash': derash(r), 'demo_bots': bot_names, 'mode': mode,
+    snap = {'stake': r['stake'], 'phase': r['phase'], 'countdown': r['countdown'], 'players': n_players(r),
+            'real_players': real_players(r), 'bot_count': len(bot_names), 'min_players': MIN_PLAYERS,
+            'total_cards': len(r['cards']), 'derash': derash(r), 'bot_names': bot_names,
             'taken_cards': tk_c, 'my_cards': my_c, 'my_boards': {str(n): r['cards'][n]['grid'] for n in my_c},
             'called': r['called'], 'winner': r['winner'], 'winner_left': max(0, int(r['win_until'] - time.time())) if r['phase'] == 'WINNER' else 0}
   with get_db() as c:
@@ -565,10 +571,9 @@ async def api_buy(req: Request, x_tg_init_data: str = Header(default='')):
   u, b = auth_user(x_tg_init_data), await req.json()
   try: st, cno = int(b.get('stake', 10)), int(b.get('card_no', 0))
   except (TypeError, ValueError): raise HTTPException(400, 'ልክ ያልሆነ ካርድ!')
-  mode = str(b.get('mode', 'real'))
-  if st not in rooms or mode not in ('real', 'demo') or not (1 <= cno <= 400): raise HTTPException(400, 'ልክ ያልሆነ ካርድ!')
+  if st not in rooms or not (1 <= cno <= 400): raise HTTPException(400, 'ልክ ያልሆነ ካርድ!')
   with room_lock:
-    r = (demo_rooms if mode == 'demo' else rooms)[st]
+    r = rooms[st]
     if r['phase'] not in ('WAITING', 'COUNTDOWN'): raise HTTPException(400, 'ጨዋታው ተጀምሯል!')
     if cno in r['cards']:
       if r['cards'][cno]['uid'] == u['uid']:
