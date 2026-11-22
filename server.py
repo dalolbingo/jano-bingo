@@ -152,21 +152,15 @@ check_win = lambda g, cs: next((ln for ln in WIN_LINES if all(g[i] == 'FREE' or 
 mk_room = lambda s: {'stake': s, 'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'tick': time.time(), 'winner': None, 'win_until': 0.0}
 rooms = {10: mk_room(10), 20: mk_room(20), 50: mk_room(50)}
 DEMO_BOT_NAMES = ['Abel','Hana','Dawit','Selam','Meron','Natnael','Liya','Bereket','Rahel','Yonatan','Eden','Sami','Tigist','Mikiyas','Meseret']
-def mk_demo_room(stake):
-  room = mk_room(stake)
-  room['demo'] = True
-  return room
-for room in rooms.values():
-  seed_demo_bots(room)
 def seed_demo_bots(r):
   used = set(r['cards'])
   available = [n for n in range(1, 401) if n not in used]
   for i, name in enumerate(DEMO_BOT_NAMES):
     cno = random.SystemRandom().choice(available)
     available.remove(cno)
-    r['cards'][cno] = {'uid': -(i + 1), 'name': name + ' (DEMO BOT)', 'grid': gen_card(cno), 'is_bot': True}
-for demo_room in demo_rooms.values():
-  seed_demo_bots(demo_room)
+    r['cards'][cno] = {'uid': -(i + 1), 'name': name + ' (BOT)', 'grid': gen_card(cno), 'is_bot': True}
+for room in rooms.values():
+  seed_demo_bots(room)
 n_players = lambda r: len({v['uid'] for v in r['cards'].values()})
 real_players = lambda r: len({v['uid'] for v in r['cards'].values() if v['uid'] > 0})
 paid_cards = lambda r: sum(1 for v in r['cards'].values() if not v.get('is_bot'))
