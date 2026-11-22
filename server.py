@@ -362,7 +362,7 @@ if bot:
         c.execute('BEGIN IMMEDIATE')
         u = c.execute('SELECT play_wallet FROM users WHERE uid=?', (m.from_user.id,)).fetchone()
         if not u or not math.isfinite(float(amt)) or amt < 100 or u['play_wallet'] < amt:
-          return bot.reply_to(m, '❌ በቂ Win Wallet የለዎትም ወይም የገንዘብ መጠኑ ትክክል አይደለም!')
+          return bot.reply_to(m, '❌ በቂ ባላንስ የለዎትም ወይም የገንዘብ መጠኑ ትክክል አይደለም!')
         cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, m.from_user.id, amt))
         if cur.rowcount != 1:
           return bot.reply_to(m, '❌ በቂ ባላንስ የለዎትም!')
@@ -522,7 +522,7 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
   with get_db() as c:
     txs = [dict(x) for x in c.execute('SELECT icon,title,amount,created_at FROM transactions WHERE uid=? ORDER BY id DESC LIMIT 25', (u['uid'],)).fetchall()]
     top = [dict(x) for x in c.execute('SELECT name,total_won FROM users WHERE total_won>0 ORDER BY total_won DESC LIMIT 10').fetchall()]
-  return {'user': {'uid': u['uid'], 'name': u['name'], 'play_wallet': round(u['play_wallet'],2), 'win_wallet': round(u['win_wallet'],2), 'matches_played': u['matches_played'], 'wins': u['wins']},
+  return {'user': {'uid': u['uid'], 'name': u['name'], 'play_wallet': round(u['play_wallet'],2), 'matches_played': u['matches_played'], 'wins': u['wins']},
           'config': {'telebirr_name': TB_NAME, 'telebirr_phone': TB_PHONE, 'support': SUPPORT}, 'room': snap, 'history': txs, 'rank': top}
 
 @app.post('/api/buy_card')
@@ -572,19 +572,6 @@ async def api_claim(req: Request, x_tg_init_data: str = Header(default='')):
     if not wl: raise HTTPException(400, 'ገና BINGO አልተሟላም!')
     finish_round(r, u['uid'], u['name'], cno, wl)
     return {'ok': True, 'prize': r['winner']['prize']}
-
-@app.post('/api/transfer')
-async def api_transfer(x_tg_init_data: str = Header(default='')):
-  u = auth_user(x_tg_init_data)
-  with get_db() as c:
-    c.execute('BEGIN IMMEDIATE')
-    row = c.execute('SELECT play_wallet FROM users WHERE uid=?', (u['uid'],)).fetchone()
-    amt = row['win_wallet'] if row else 0
-    if amt <= 0: raise HTTPException(400, 'በ Win Wallet ውስጥ ገንዘብ የለም!')
-    cur = c.execute('UPDATE users SET play_wallet=play_wallet+?, win_wallet=0 WHERE uid=? AND win_wallet=?', (amt, u['uid'], amt))
-    if cur.rowcount != 1: raise HTTPException(409, 'ባላንሱ ተቀይሯል፤ እንደገና ይሞክሩ።')
-    add_tx(c, u['uid'], '🔄', 'ከ Win ወደ Play', amt)
-  return {'ok': True, 'amount': amt}
 
 @app.post('/api/deposit')
 async def api_dep(req: Request, x_tg_init_data: str = Header(default='')):
