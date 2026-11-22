@@ -1,4 +1,5 @@
-import hashlib, hmac, json, math, os, random, secrets, sqlite3, threading, time, urllib.parse
+import hashlib, hmac, json, math, os, random, secrets, threading, time, urllib.parse
+import psycopg
 from contextlib import contextmanager
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,39 +19,93 @@ APP_URL = ('https://' + APP_URL[8:]) if APP_URL.lower().startswith('https://') e
 SUPPORT = os.environ.get('SUPPORT_USERNAME', '@royal_bingo_99_Support')
 TB_NAME = os.environ.get('TELEBIRR_NAME', 'SINSHAW JEMANEH ESHETE')
 TB_PHONE = os.environ.get('TELEBIRR_PHONE', '0941882333')
-DB_PATH = os.environ.get('DB_PATH', 'royal_bingo.db')
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip().strip("'\"")
 HOUSE_CUT, CD_SEC, CALL_SEC, WIN_SEC = 0.20, 25, 3.0, 10
 MIN_PLAYERS = int(os.environ.get('MIN_PLAYERS', '2') or '2')
 db_lock, room_lock = threading.RLock(), threading.RLock()
 
+class HybridRow:
+  def __init__(self, names, values):
+    self._names, self._values = names, values
+    self._map = dict(zip(names, values))
+  def __getitem__(self, key):
+    return self._map[key] if isinstance(key, str) else self._values[key]
+  def __iter__(self):
+    return iter(self._values)
+  def __len__(self):
+    return len(self._values)
+  def keys(self):
+    return self._names
+
+class PGCursor:
+  def __init__(self, cursor, lastrowid=None):
+    self._cursor, self.lastrowid = cursor, lastrowid
+    self._names = [d.name for d in cursor.description] if cursor.description else []
+  @property
+  def rowcount(self):
+    return self._cursor.rowcount
+  def fetchone(self):
+    row = self._cursor.fetchone()
+    return HybridRow(self._names, row) if row is not None else None
+  def fetchall(self):
+    return [HybridRow(self._names, row) for row in self._cursor.fetchall()]
+
+class PGConnection:
+  def __init__(self, conn):
+    self._conn = conn
+  def execute(self, sql, params=()):
+    statement = sql.strip().replace('BEGIN IMMEDIATE', 'BEGIN')
+    ignore = statement.upper().startswith('INSERT OR IGNORE INTO')
+    if ignore:
+      statement = statement.replace('INSERT OR IGNORE INTO', 'INSERT INTO', 1)
+      statement += ' ON CONFLICT DO NOTHING'
+    wants_id = statement.upper().startswith('INSERT INTO REQUESTS ')
+    if wants_id:
+      statement += ' RETURNING id'
+    statement = statement.replace('?', '%s')
+    cur = self._conn.execute(statement, params)
+    lastrowid = None
+    if wants_id:
+      inserted = cur.fetchone()
+      if inserted is not None:
+        lastrowid = inserted[0]
+    return PGCursor(cur, lastrowid)
+
 @contextmanager
 def get_db():
+  if not DATABASE_URL:
+    raise RuntimeError('DATABASE_URL is not configured. Add your Neon connection string in Render environment variables.')
   with db_lock:
-    c = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
-    c.row_factory = sqlite3.Row
-    c.execute('PRAGMA foreign_keys=ON')
-    c.execute('PRAGMA busy_timeout=30000')
-    try: yield c; c.commit()
-    finally: c.close()
+    conn = psycopg.connect(DATABASE_URL)
+    c = PGConnection(conn)
+    try:
+      yield c
+      conn.commit()
+    except Exception:
+      conn.rollback()
+      raise
+    finally:
+      conn.close()
 
 def init_db():
   with get_db() as c:
-    c.execute('PRAGMA journal_mode=WAL')
-    c.executescript("""
-    CREATE TABLE IF NOT EXISTS users (uid INTEGER PRIMARY KEY, name TEXT DEFAULT 'Player', phone TEXT,
-      play_wallet REAL DEFAULT 0, win_wallet REAL DEFAULT 0, matches_played INTEGER DEFAULT 0,
-      wins INTEGER DEFAULT 0, total_won REAL DEFAULT 0, referred_by INTEGER, created_at INTEGER);
-    CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER,
-      icon TEXT, title TEXT, amount REAL, created_at INTEGER);
-    CREATE TABLE IF NOT EXISTS requests (id INTEGER PRIMARY KEY AUTOINCREMENT, req_type TEXT, uid INTEGER,
-      amount REAL, method TEXT, details TEXT, status TEXT DEFAULT 'pending', created_at INTEGER, reference TEXT);
-    CREATE TABLE IF NOT EXISTS house_stats (id INTEGER PRIMARY KEY CHECK (id=1),
-      total_commission REAL DEFAULT 0, total_rounds INTEGER DEFAULT 0);
-    INSERT OR IGNORE INTO house_stats VALUES (1, 0, 0);
-    """)
-    cols = {row['name'] for row in c.execute('PRAGMA table_info(requests)').fetchall()}
-    if 'reference' not in cols:
-      c.execute('ALTER TABLE requests ADD COLUMN reference TEXT')
+    c.execute("""CREATE TABLE IF NOT EXISTS users (
+      uid BIGINT PRIMARY KEY, name TEXT DEFAULT 'Player', phone TEXT,
+      play_wallet DOUBLE PRECISION DEFAULT 0, win_wallet DOUBLE PRECISION DEFAULT 0,
+      matches_played INTEGER DEFAULT 0, wins INTEGER DEFAULT 0,
+      total_won DOUBLE PRECISION DEFAULT 0, referred_by BIGINT, created_at BIGINT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS transactions (
+      id BIGSERIAL PRIMARY KEY, uid BIGINT, icon TEXT, title TEXT,
+      amount DOUBLE PRECISION, created_at BIGINT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS requests (
+      id BIGSERIAL PRIMARY KEY, req_type TEXT, uid BIGINT, amount DOUBLE PRECISION,
+      method TEXT, details TEXT, status TEXT DEFAULT 'pending',
+      created_at BIGINT, reference TEXT)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS house_stats (
+      id INTEGER PRIMARY KEY CHECK (id=1),
+      total_commission DOUBLE PRECISION DEFAULT 0,
+      total_rounds INTEGER DEFAULT 0)""")
+    c.execute('INSERT INTO house_stats (id,total_commission,total_rounds) VALUES (1,0,0) ON CONFLICT (id) DO NOTHING')
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_requests_reference ON requests(reference) WHERE reference IS NOT NULL AND reference <> ''")
 
 def ensure_user(uid, name='Player', ref=None):
@@ -157,14 +212,14 @@ is_adm = lambda uid: ADMIN_ID != 0 and int(uid) == int(ADMIN_ID)
 
 def menu_kb(uid=None):
   kb = RKB(resize_keyboard=True)
-  kb.row(KBtn('🎮 Play Royal Bingo'))
+  kb.row(KBtn('🎮 Play JANO BINGO'))
   kb.row(KBtn('💰 ገቢ (Deposit)'), KBtn('💸 ወጪ (Withdraw)'))
   kb.row(KBtn('💳 ባላንስ (Balance)'), KBtn('👥 ግብዣ (Invite)'))
   kb.row(KBtn('📝 ምዝገባ (Register)'), KBtn('🎧 ድጋፍ (Support)'))
   kb.row(KBtn('📜 ህግና መመሪያ'), KBtn('👑 Admin Panel')) if (uid and is_adm(uid)) else kb.row(KBtn('📜 ህግና መመሪያ'))
   return kb
 
-def play_kb(lbl='🎲 Play Royal Bingo'):
+def play_kb(lbl='🎲 Play JANO BINGO'):
   kb = IKB(); kb.add(IBtn(lbl, web_app=WebAppInfo(url=APP_URL))); return kb
 
 def adm_kb():
@@ -200,7 +255,7 @@ if bot:
   @bot.message_handler(func=lambda m: m.text == '👑 Admin Panel')
   def c_admin(m):
     if not is_adm(m.from_user.id): return bot.reply_to(m, '⛔ ለአድሚን ብቻ!')
-    bot.send_message(m.chat.id, '👑 ROYAL BINGO — የአድሚን መቆጣጠሪያ', reply_markup=adm_kb())
+    bot.send_message(m.chat.id, '👑 JANO BINGO — የአድሚን መቆጣጠሪያ', reply_markup=adm_kb())
 
   @bot.message_handler(commands=['start'])
   def c_start(m):
@@ -209,8 +264,8 @@ if bot:
     u = ensure_user(m.from_user.id, m.from_user.first_name or 'Player', ref)
     if not u['phone']:
       kb = RKB(resize_keyboard=True, one_time_keyboard=True); kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
-      return bot.send_message(m.chat.id, '👑 እንኳን ወደ ROYAL BINGO በደህና መጡ!\n\nለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
-    bot.send_message(m.chat.id, f'👑 ወደ ROYAL BINGO በደህና መጡ!\n🎧 ድጋፍ፦ {SUPPORT}', reply_markup=menu_kb(m.from_user.id))
+      return bot.send_message(m.chat.id, '👑 እንኳን ወደ JANO BINGO በደህና መጡ!\n\nለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
+    bot.send_message(m.chat.id, f'👑 ወደ JANO BINGO በደህና መጡ!\n🎧 ድጋፍ፦ {SUPPORT}', reply_markup=menu_kb(m.from_user.id))
     bot.send_message(m.chat.id, '🎰 ጨዋታውን ለመክፈት ከታች ይጫኑ 👇', reply_markup=play_kb('🎮 Play Now'))
 
   @bot.message_handler(content_types=['contact'])
@@ -221,8 +276,8 @@ if bot:
     bot.send_message(m.chat.id, '🎰 ጨዋታውን ለመክፈት ከታች ይጫኑ 👇', reply_markup=play_kb('🎮 Play Now'))
 
   @bot.message_handler(commands=['play'])
-  @bot.message_handler(func=lambda m: m.text == '🎮 Play Royal Bingo')
-  def c_play(m): bot.send_message(m.chat.id, 'Good luck Royal Bingo 🍀', reply_markup=play_kb('🎲 Play Royal Bingo'))
+  @bot.message_handler(func=lambda m: m.text == '🎮 Play JANO BINGO')
+  def c_play(m): bot.send_message(m.chat.id, 'Good luck JANO BINGO 🍀', reply_markup=play_kb('🎲 Play JANO BINGO'))
 
   @bot.message_handler(commands=['balance'])
   @bot.message_handler(func=lambda m: m.text == '💳 ባላንስ (Balance)')
@@ -253,7 +308,7 @@ if bot:
     tx = (m.text or '').strip()
     if len(tx) < 4 or len(tx) > 120: return bot.reply_to(m, '❌ ትክክለኛ Transaction ID ያስገቡ።')
     try: notify_req('deposit', m.from_user.id, amt, md, f'TX: {tx}', reference=tx)
-    except sqlite3.IntegrityError: return bot.reply_to(m, '❌ ይህ Transaction ID ቀድሞ ተጠቅሟል።')
+    except psycopg.IntegrityError: return bot.reply_to(m, '❌ ይህ Transaction ID ቀድሞ ተጠቅሟል።')
     bot.reply_to(m, f'✅ የ {amt:.2f} ETB ገቢ ጥያቄዎ ለአድሚን ተልኳል!', reply_markup=menu_kb(m.from_user.id))
 
   @bot.message_handler(commands=['withdraw'])
@@ -296,7 +351,7 @@ if bot:
         try: bot.send_message(ADMIN_ID, f'🔔 አዲስ የወጪ ጥያቄ!\n\n🆔 #{rid}\n👤 {m.from_user.first_name or "Player"} (ID: {m.from_user.id})\n💵 {amt:.2f} ETB\n🏦 {md}\n📱 {acc}', reply_markup=kb)
         except Exception: pass
       bot.reply_to(m, f'✅ የ {amt:.2f} ETB የወጪ ጥያቄዎ ተመዝግቧል።', reply_markup=menu_kb(m.from_user.id))
-    except sqlite3.Error:
+    except psycopg.Error:
       bot.reply_to(m, '❌ ጥያቄውን ማስመዝገብ አልተቻለም። እባክዎ እንደገና ይሞክሩ።')
 
   @bot.callback_query_handler(func=lambda c: c.data.startswith(('adm_', 'ap_', 'rj_')))
@@ -323,8 +378,8 @@ if bot:
       MIN_PLAYERS = 1 if MIN_PLAYERS >= 3 else MIN_PLAYERS + 1
       bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=adm_kb())
       bot.send_message(call.message.chat.id, f'⚙️ ዝቅተኛ ተጫዋች ወደ {MIN_PLAYERS} ተቀይሯል።')
-    elif d == 'adm_backup' and os.path.exists(DB_PATH):
-      with open(DB_PATH, 'rb') as f: bot.send_document(call.message.chat.id, f, caption='💾 DB Backup')
+    elif d == 'adm_backup':
+      bot.send_message(call.message.chat.id, '💾 Database is hosted on Neon PostgreSQL. Use Neon backup/restore tools for database backups.')
     elif d == 'adm_bcast':
       bot.register_next_step_handler(bot.send_message(call.message.chat.id, '📢 ለሁሉም የሚላከውን መልዕክት ይጻፉ፦'), s_bcast)
     elif d.startswith(('ap_', 'rj_')):
@@ -405,7 +460,7 @@ def run_bot():
     try: bot.infinity_polling(timeout=20, long_polling_timeout=15)
     except Exception as e: print('Bot error:', e); time.sleep(5)
 
-app = FastAPI(title='ROYAL BINGO Live')
+app = FastAPI(title='JANO BINGO Live')
 allowed_origins = [x.strip().rstrip('/') for x in os.environ.get('CORS_ORIGINS', APP_URL).split(',') if x.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_methods=['GET', 'POST'], allow_headers=['Content-Type', 'X-Tg-Init-Data'])
 if os.path.isdir('sounds'): app.mount('/sounds', StaticFiles(directory='sounds'), name='sounds')
@@ -508,7 +563,7 @@ async def api_dep(req: Request, x_tg_init_data: str = Header(default='')):
   if not math.isfinite(amt) or amt < 20 or amt > 1000000 or len(tx) < 4 or len(tx) > 120:
     raise HTTPException(400, 'ዝቅተኛ 20 ETB፣ ትክክለኛ Transaction ID እና ተገቢ መጠን ያስገቡ!')
   try: notify_req('deposit', u['uid'], amt, 'TeleBirr/CBE', f'App TX: {tx}', reference=tx)
-  except sqlite3.IntegrityError: raise HTTPException(409, 'ይህ Transaction ID ቀድሞ ተጠቅሟል!')
+  except psycopg.IntegrityError: raise HTTPException(409, 'ይህ Transaction ID ቀድሞ ተጠቅሟል!')
   return {'ok': True}
 
 @app.post('/api/withdraw')
