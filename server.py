@@ -365,7 +365,7 @@ if bot:
           return bot.reply_to(m, '❌ በቂ Win Wallet የለዎትም ወይም የገንዘብ መጠኑ ትክክል አይደለም!')
         cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, m.from_user.id, amt))
         if cur.rowcount != 1:
-          return bot.reply_to(m, '❌ በቂ Win Wallet የለዎትም!')
+          return bot.reply_to(m, '❌ በቂ ባላንስ የለዎትም!')
         add_tx(c, m.from_user.id, '💸', f'የወጪ ጥያቄ ({md})', -amt)
         rid = c.execute('INSERT INTO requests (req_type,uid,amount,method,details,status,created_at) VALUES (?,?,?,?,?,?,?)',
                         ('withdraw', m.from_user.id, amt, md, f'Acc: {acc}', 'pending', int(time.time()))).lastrowid
@@ -549,7 +549,7 @@ async def api_buy(req: Request, x_tg_init_data: str = Header(default='')):
     with get_db() as c:
       c.execute('BEGIN IMMEDIATE')
       wallet = c.execute('SELECT play_wallet FROM users WHERE uid=?', (u['uid'],)).fetchone()
-      if not wallet or wallet['play_wallet'] < st: raise HTTPException(400, 'በቂ Play Wallet የለዎትም! ገቢ ያድርጉ።')
+      if not wallet or wallet['play_wallet'] < st: raise HTTPException(400, 'በቂ ባላንስ የለዎትም! ገቢ ያድርጉ።')
       c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=?', (st, u['uid']))
       add_tx(c, u['uid'], '🎴', f'ካርድ #{cno} ({st} ብር)', -st)
       c.execute('INSERT INTO room_cards (stake,card_no,uid,name,grid) VALUES (?,?,?,?,?)',
@@ -609,7 +609,7 @@ async def api_wd(req: Request, x_tg_init_data: str = Header(default='')):
   with get_db() as c:
     c.execute('BEGIN IMMEDIATE')
     row = c.execute('SELECT play_wallet FROM users WHERE uid=?', (u['uid'],)).fetchone()
-    if not row or row['play_wallet'] < amt: raise HTTPException(400, 'በቂ Win Wallet የለዎትም!')
+    if not row or row['play_wallet'] < amt: raise HTTPException(400, 'በቂ ባላንስ የለዎትም!')
     cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, u['uid'], amt))
     if cur.rowcount != 1: raise HTTPException(409, 'ባላንሱ ተቀይሯል፤ እንደገና ይሞክሩ።')
     add_tx(c, u['uid'], '💸', f'የወጪ ጥያቄ ({ph})', -amt)
