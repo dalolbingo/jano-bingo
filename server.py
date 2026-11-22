@@ -20,7 +20,7 @@ SUPPORT = os.environ.get('SUPPORT_USERNAME', '@JanoBingoSupportBot')
 TB_NAME = os.environ.get('TELEBIRR_NAME', 'SINSHAW JEMANEH ESHETE')
 TB_PHONE = os.environ.get('TELEBIRR_PHONE', '0941882333')
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip().strip("'\"")
-HOUSE_CUT, CD_SEC, CALL_SEC, WIN_SEC = 0.20, 25, 3.0, 10
+HOUSE_CUT, CD_SEC, CALL_SEC, WIN_SEC = 0.20, 60, 3.0, 10
 MIN_PLAYERS = int(os.environ.get('MIN_PLAYERS', '2') or '2')
 db_lock, room_lock = threading.RLock(), threading.RLock()
 
@@ -149,20 +149,20 @@ WIN_LINES = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22
              [0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24],
              [0,6,12,18,24],[4,8,12,16,20],[0,4,20,24]]
 check_win = lambda g, cs: next((ln for ln in WIN_LINES if all(g[i] == 'FREE' or g[i] in cs for i in ln)), None)
-mk_room = lambda s: {'stake': s, 'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'tick': time.time(), 'winner': None, 'win_until': 0.0, 'last_bot_count': 0}
+mk_room = lambda s: {'stake': s, 'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'tick': time.time(), 'winner': None, 'win_until': 0.0, 'last_bot_count': 0, 'bot_queue': [], 'bot_start_at': None, 'bot_index': 0}
 rooms = {10: mk_room(10), 20: mk_room(20), 50: mk_room(50)}
 BOT_NAMES = ['Abel','Hana','Dawit','Selam','Meron','Natnael','Liya','Bereket','Rahel','Yonatan','Eden','Sami','Tigist','Mikiyas','Meseret','Amanuel','Hirut','Fitsum','Biniam','Martha','Robel','Saron','Henok','Bethlehem','Yared']
 def seed_bots(r):
-  used = set(r['cards'])
-  available = [n for n in range(1, 401) if n not in used]
   rng = random.SystemRandom()
   counts = [n for n in range(15, 21) if n != r.get('last_bot_count')]
   bot_count = rng.choice(counts)
   r['last_bot_count'] = bot_count
-  for i, name in enumerate(rng.sample(BOT_NAMES, bot_count)):
-    cno = rng.choice(available)
-    available.remove(cno)
-    r['cards'][cno] = {'uid': -(i + 1), 'name': name + ' (BOT)', 'grid': gen_card(cno), 'is_bot': True}
+  # Bots are queued, not preloaded. Each gets a unique random second in the 55-second selection window.
+  offsets = sorted(rng.sample(range(1, 56), bot_count))
+  names = rng.sample(BOT_NAMES, bot_count)
+  r['bot_queue'] = [{'name': name, 'at': offset} for name, offset in zip(names, offsets)]
+  r['bot_start_at'] = None
+  r['bot_index'] = 0
 for room in rooms.values():
   seed_bots(room)
 real_players = lambda r: len({v['uid'] for v in r['cards'].values() if v['uid'] > 0})
@@ -207,13 +207,27 @@ def game_loop():
     now = time.time()
     with room_lock:
       for r in rooms.values():
+        # Start the staggered bot-card selection only after a real player joins this room.
+        if real_players(r) > 0 and r['bot_start_at'] is None:
+          r['bot_start_at'] = now
+        if r['bot_start_at'] is not None and r['phase'] in ('WAITING', 'COUNTDOWN'):
+          elapsed = now - r['bot_start_at']
+          while r['bot_index'] < len(r['bot_queue']) and elapsed >= r['bot_queue'][r['bot_index']]['at']:
+            used = set(r['cards'])
+            available = [n for n in range(1, 401) if n not in used]
+            if not available: break
+            i = r['bot_index']
+            cno = random.SystemRandom().choice(available)
+            name = r['bot_queue'][i]['name']
+            r['cards'][cno] = {'uid': -(i + 1), 'name': name + ' (BOT)', 'grid': gen_card(cno), 'is_bot': True}
+            r['bot_index'] += 1
         pc = n_players(r)
         if r['phase'] in ('WAITING', 'COUNTDOWN') and real_players(r) == 0:
           r.update({'phase': 'WAITING', 'countdown': CD_SEC, 'tick': now})
-        elif r['phase'] == 'WAITING' and pc >= MIN_PLAYERS and real_players(r) >= 1:
+        elif r['phase'] == 'WAITING' and pc >= max(3, MIN_PLAYERS) and real_players(r) >= 1:
           r.update({'phase': 'COUNTDOWN', 'countdown': CD_SEC, 'tick': now})
         elif r['phase'] == 'COUNTDOWN':
-          if pc < MIN_PLAYERS or real_players(r) < 1: r.update({'phase': 'WAITING', 'countdown': CD_SEC})
+          if pc < max(3, MIN_PLAYERS) or real_players(r) < 1: r.update({'phase': 'WAITING', 'countdown': CD_SEC})
           elif now - r['tick'] >= 1.0:
             r['tick'], r['countdown'] = now, r['countdown'] - 1
             if r['countdown'] <= 0:
@@ -557,7 +571,7 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
     my_c = sorted([k for k, v in r['cards'].items() if v['uid'] == u['uid']])
     tk_c = sorted([k for k, v in r['cards'].items() if v['uid'] != u['uid']])
     snap = {'stake': r['stake'], 'phase': r['phase'], 'countdown': r['countdown'], 'players': n_players(r),
-            'min_players': MIN_PLAYERS,
+            'min_players': max(3, MIN_PLAYERS),
             'total_cards': len(r['cards']), 'derash': derash(r),
             'taken_cards': tk_c, 'my_cards': my_c, 'my_boards': {str(n): r['cards'][n]['grid'] for n in my_c},
             'called': r['called'], 'winner': ({'is_bot': True, 'prize': 0.0} if r['winner'] and r['winner'].get('is_bot') else r['winner']),
