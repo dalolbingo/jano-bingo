@@ -269,11 +269,17 @@ body.light .status-banner{color:#1d4ed8}
 
       <div id="wdDrw" class="drw">
         <div class="shd c-gold">💸 የወጪ ጥያቄ (Withdrawal)</div>
-        <div class="pay-logos"><div class="pay-logo-card"><img class="pay-logo-img tele-logo" src="/static/telebirr-logo.svg" alt="Telebirr" /></div><div class="pay-logo-card cbe-card"><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></div></div>
-        <div class="fstack">
-          <input id="wdAmt" class="rinp" type="number" placeholder="የሚወጣው መጠን (ዝቅተኛ 100 ETB)" />
-          <input id="wdPh" class="rinp" type="tel" placeholder="የTeleBirr / CBE Birr ቁጥርዎ (09...)" />
-          <button class="btnp" onclick="sendWd()">✔️ የወጪ ጥያቄ ላክ</button>
+        <div class="pay-logos">
+          <div id="wdTeleLogo" class="pay-logo-card" onclick="showWithdrawMethod('TeleBirr')"><img class="pay-logo-img tele-logo" src="/static/telebirr-logo.svg" alt="TeleBirr" /></div>
+          <div id="wdCbeLogo" class="pay-logo-card cbe-card" onclick="showWithdrawMethod('CBE Birr')"><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></div>
+        </div>
+        <div id="wdPayContent" class="pay-content">
+          <div class="fstack">
+            <div class="arow"><strong>Selected method:</strong><strong id="wdPayMethod" class="c-gold">TeleBirr</strong></div>
+            <input id="wdAmt" class="rinp" type="number" placeholder="የሚወጣው መጠን (ዝቅተኛ 100 ETB)" />
+            <input id="wdPh" class="rinp" type="tel" placeholder="የTeleBirr / CBE Birr ቁጥርዎ (09...)" />
+            <button class="btnp" onclick="sendWd()">✔️ የወጪ ጥያቄ ላክ</button>
+          </div>
         </div>
       </div>
     </div>
@@ -682,7 +688,8 @@ async function sendWd() {
   var a = parseFloat(document.getElementById('wdAmt').value);
   var ph = document.getElementById('wdPh').value.trim();
   try {
-    await apiReq('/api/withdraw', 'POST', { amount: a, phone: ph });
+    var method = document.getElementById('wdPayMethod').textContent;
+    await apiReq('/api/withdraw', 'POST', { amount: a, phone: ph, method: method });
     document.getElementById('wdAmt').value = '';
     document.getElementById('wdPh').value = '';
     document.getElementById('wdDrw').classList.remove('on');
@@ -742,10 +749,32 @@ function showDepositAccount(method) {
   tele.classList.toggle('active', method === 'TeleBirr');
   cbe.classList.toggle('active', method === 'CBE Birr');
 }
+var wdSwitchTimer = null;
+function showWithdrawMethod(method) {
+  var details = document.getElementById('wdPayContent');
+  var methodLabel = document.getElementById('wdPayMethod');
+  var tele = document.getElementById('wdTeleLogo');
+  var cbe = document.getElementById('wdCbeLogo');
+  clearTimeout(wdSwitchTimer);
+  if (details.classList.contains('on') && methodLabel.textContent !== method) {
+    details.classList.add('switching');
+    wdSwitchTimer = setTimeout(function() {
+      methodLabel.textContent = method;
+      details.classList.remove('switching');
+    }, 160);
+  } else {
+    methodLabel.textContent = method;
+    details.classList.add('on');
+    details.classList.remove('switching');
+  }
+  details.classList.add('on');
+  tele.classList.toggle('active', method === 'TeleBirr');
+  cbe.classList.toggle('active', method === 'CBE Birr');
+}
 function openDrw(w) {
   var d = document.getElementById('depDrw'), wd = document.getElementById('wdDrw');
   if (w === 'dep') { d.classList.toggle('on'); wd.classList.remove('on'); if (!d.classList.contains('on')) { document.getElementById('depPayContent').classList.remove('on'); document.getElementById('depTeleLogo').classList.remove('active'); document.getElementById('depCbeLogo').classList.remove('active'); } }
-  else { wd.classList.toggle('on'); d.classList.remove('on'); }
+  else { wd.classList.toggle('on'); d.classList.remove('on'); if (!wd.classList.contains('on')) { document.getElementById('wdPayContent').classList.remove('on','switching'); document.getElementById('wdTeleLogo').classList.remove('active'); document.getElementById('wdCbeLogo').classList.remove('active'); } }
 }
 function setThm(t) {
   document.body.classList.toggle('light', t === 'light');
