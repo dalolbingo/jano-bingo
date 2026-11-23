@@ -16,7 +16,7 @@ DEFAULT_URL = 'https://jano-bingo-e8m6.onrender.com'
 APP_URL = (os.environ.get('APP_URL') or DEFAULT_URL).strip().strip("'\"").rstrip('/')
 APP_URL = ('https://' + APP_URL[8:]) if APP_URL.lower().startswith('https://') else DEFAULT_URL
 
-SUPPORT = os.environ.get('SUPPORT_USERNAME', '@JanoBingoSupportBot')
+SUPPORT = '@janobingosupport1'
 TB_NAME = os.environ.get('TELEBIRR_NAME', 'SINSHAW JEMANEH ESHETE')
 TB_PHONE = os.environ.get('TELEBIRR_PHONE', '0941882333')
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip().strip("'\"")
@@ -595,7 +595,10 @@ if bot:
 
   @bot.message_handler(commands=['support'])
   @bot.message_handler(func=lambda m: m.text == '🎧 ድጋፍ (Support)')
-  def c_sup(m): bot.send_message(m.chat.id, f'🎧 ድጋፍ፦ {SUPPORT}')
+  def c_sup(m):
+    support_url = f"https://t.me/{SUPPORT.lstrip('@')}"
+    kb = IKB(); kb.add(IBtn('💬 የድጋፍ ቡድንን ያነጋግሩ / Contact Support', url=support_url))
+    bot.send_message(m.chat.id, f'🎧 የJANO BINGO ድጋፍ\n\nለእርዳታ ከዚህ ይጻፉ፦ {SUPPORT}\n\nContact our support account:', reply_markup=kb, disable_web_page_preview=True)
 
   @bot.message_handler(commands=['rules'])
   @bot.message_handler(func=lambda m: m.text == '📜 ህግና መመሪያ')
