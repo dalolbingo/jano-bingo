@@ -120,7 +120,7 @@ body.light .status-banner{color:#1d4ed8}
 .btnw{padding:12px;border-radius:12px;border:none;background:var(--ggrad);color:#090d16;font-size:13px;font-weight:800;cursor:pointer}
 .drw{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}.drw.on{display:block}
 .abox{background:var(--card2);border:1px solid var(--bdg);border-radius:12px;padding:12px;margin-bottom:10px}
-.pay-logos{display:flex;align-items:center;justify-content:space-evenly;gap:18px;margin:0 0 12px;min-height:58px}.pay-logo-img{display:block;max-width:46%;height:52px;object-fit:contain}.pay-logo-img.tele-logo{width:52px;height:52px}.pay-logo-img.cbe-logo{width:112px;height:52px}
+.pay-logos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px}.pay-logo-card{min-height:82px;padding:10px;border:2px solid transparent;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.16)}.pay-logo-card.active{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.18)}.pay-logo-img{display:block;max-width:100%;height:54px;object-fit:contain}.pay-logo-img.tele-logo{width:58px;height:58px}.pay-logo-img.cbe-logo{width:126px;height:58px}.pay-details{display:none}.pay-details.on{display:block}
 .arow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13.5px}
 .cmini{padding:5px 10px;border-radius:7px;border:none;background:var(--ggrad);color:#090d16;font-size:11px;font-weight:800;cursor:pointer}
 .fstack{display:flex;flex-direction:column;gap:9px}
@@ -246,11 +246,14 @@ body.light .status-banner{color:#1d4ed8}
       </div>
 
       <div id="depDrw" class="drw">
-        <div class="shd c-em">📲 የገቢ መመሪያ (TeleBirr / CBE)</div>
-        <div class="pay-logos"><img class="pay-logo-img tele-logo" src="/static/telebirr-logo.svg" alt="telebirr" /><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></div>
-        <div class="abox">
+        <div class="shd c-em">📲 የገቢ መመሪያ (TeleBirr / CBE Birr)</div>
+        <div class="pay-logos">
+          <button type="button" class="pay-logo-card" id="depTeleLogo" onclick="showDepositAccount('TeleBirr')"><img class="pay-logo-img tele-logo" src="/static/telebirr-logo.svg" alt="Telebirr" /></button>
+          <button type="button" class="pay-logo-card" id="depCbeLogo" onclick="showDepositAccount('CBE Birr')"><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></button>
+        </div>
+        <div id="depPayDetails" class="abox pay-details">
           <div class="arow">
-            <strong>TeleBirr: <span id="agPhone">0941882333</span></strong>
+            <strong><span id="depPayMethod">TeleBirr</span>: <span id="agPhone">0941882333</span></strong>
             <button class="cmini" onclick="cpTxt(document.getElementById('agPhone').textContent,'ቁጥሩ ተቀድቷል!')">ቅዳ</button>
           </div>
           <div style="font-size:12px;color:var(--mut)">ስም፦ <strong id="agName">SINSHAW JEMANEH ESHETE</strong></div>
@@ -267,7 +270,7 @@ body.light .status-banner{color:#1d4ed8}
         <div class="pay-logos"><img class="pay-logo-img tele-logo" src="/static/telebirr-logo.svg" alt="telebirr" /><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></div>
         <div class="fstack">
           <input id="wdAmt" class="rinp" type="number" placeholder="የሚወጣው መጠን (ዝቅተኛ 100 ETB)" />
-          <input id="wdPh" class="rinp" type="tel" placeholder="የTeleBirr / CBE ቁጥርዎ (09...)" />
+          <input id="wdPh" class="rinp" type="tel" placeholder="የTeleBirr / CBE Birr ቁጥርዎ (09...)" />
           <button class="btnp" onclick="sendWd()">✔️ የወጪ ጥያቄ ላክ</button>
         </div>
       </div>
@@ -710,9 +713,18 @@ function goTab(t) {
   document.getElementById('tab-' + t).classList.add('on');
   document.querySelector('.nbtn[data-t="' + t + '"]').classList.add('on');
 }
+function showDepositAccount(method) {
+  var details = document.getElementById('depPayDetails');
+  var tele = document.getElementById('depTeleLogo');
+  var cbe = document.getElementById('depCbeLogo');
+  document.getElementById('depPayMethod').textContent = method;
+  details.classList.add('on');
+  tele.classList.toggle('active', method === 'TeleBirr');
+  cbe.classList.toggle('active', method === 'CBE Birr');
+}
 function openDrw(w) {
   var d = document.getElementById('depDrw'), wd = document.getElementById('wdDrw');
-  if (w === 'dep') { d.classList.toggle('on'); wd.classList.remove('on'); }
+  if (w === 'dep') { d.classList.toggle('on'); wd.classList.remove('on'); if (!d.classList.contains('on')) { document.getElementById('depPayDetails').classList.remove('on'); document.getElementById('depTeleLogo').classList.remove('active'); document.getElementById('depCbeLogo').classList.remove('active'); } }
   else { wd.classList.toggle('on'); d.classList.remove('on'); }
 }
 function setThm(t) {
