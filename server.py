@@ -402,7 +402,7 @@ if bot:
 
   @bot.callback_query_handler(func=lambda c: c.data in ('wd_TeleBirr', 'wd_CBE'))
   def cb_wd(call):
-    bot.answer_callback_query(call.id); md = call.data.split('_')[1]
+    bot.answer_callback_query(call.id); md = 'CBE Birr' if call.data.endswith('_CBE') else 'TeleBirr'
     bot.register_next_step_handler(bot.send_message(call.message.chat.id, f'💸 በ {md} የሚወጣውን መጠን ይጻፉ (ዝቅተኛ 100 ETB)፦'), s_wd_amt, md)
 
   def s_wd_amt(m, md):
