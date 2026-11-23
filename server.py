@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 import telebot
+from PIL import Image, ImageDraw, ImageFont
 from telebot.types import InlineKeyboardButton as IBtn, InlineKeyboardMarkup as IKB, KeyboardButton as KBtn, ReplyKeyboardMarkup as RKB, ReplyKeyboardRemove, WebAppInfo, BotCommand, BotCommandScopeChat
 
 TOKEN = os.environ.get('BOT_TOKEN', '').strip().strip("'\"")
@@ -455,7 +456,8 @@ if bot:
     ensure_user(m.from_user.id, m.from_user.first_name or 'Player')
     with get_db() as c: c.execute('UPDATE users SET phone=? WHERE uid=?', (m.contact.phone_number, m.from_user.id))
     bot.send_message(m.chat.id, f'✅ ተመዝግበዋል! ({m.contact.phone_number})', reply_markup=ReplyKeyboardRemove())
-    bot.send_message(m.chat.id, '👋 Welcome to JANO BINGO! Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
+    with open(ensure_welcome_banner(), 'rb') as photo:
+      bot.send_photo(m.chat.id, photo, caption='👋 Welcome to JANO BINGO! Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
 
   @bot.message_handler(commands=['play'])
   @bot.message_handler(func=lambda m: m.text == '🎮 Play JANO BINGO')
