@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 import telebot
-from telebot.types import InlineKeyboardButton as IBtn, InlineKeyboardMarkup as IKB, KeyboardButton as KBtn, ReplyKeyboardMarkup as RKB, WebAppInfo
+from telebot.types import InlineKeyboardButton as IBtn, InlineKeyboardMarkup as IKB, KeyboardButton as KBtn, ReplyKeyboardMarkup as RKB, WebAppInfo, BotCommand, BotCommandScopeChat
 
 TOKEN = os.environ.get('BOT_TOKEN', '').strip().strip("'\"")
 try: ADMIN_ID = int(os.environ.get('ADMIN_ID', '0').strip().strip("'\"") or '0')
@@ -393,6 +393,11 @@ if bot:
     if not is_adm(m.from_user.id): return bot.reply_to(m, '⛔ ለአድሚን ብቻ!')
     bot.send_message(m.chat.id, '👑 JANO BINGO — የአድሚን መቆጣጠሪያ', reply_markup=adm_kb())
 
+  @bot.message_handler(commands=['menu'])
+  def c_menu(m):
+    bot.send_message(m.chat.id, '📋 JANO BINGO — ዋና ምናሌ', reply_markup=menu_kb(m.from_user.id))
+    bot.send_message(m.chat.id, '🎰 ጨዋታውን ለመክፈት ከታች ይጫኑ 👇', reply_markup=play_kb('🎮 Play Now'))
+
   @bot.message_handler(commands=['start'])
   def c_start(m):
     ps = (m.text or '').split()
@@ -576,24 +581,48 @@ if bot:
       except Exception: pass
     bot.reply_to(m, f'✅ ለ {s} ተጫዋቾች ተልኳል።')
 
+  @bot.message_handler(commands=['invite'])
   @bot.message_handler(func=lambda m: m.text == '👥 ግብዣ (Invite)')
   def c_inv(m):
     me = bot.get_me()
     bot.send_message(m.chat.id, f'🎁 ለእያንዳንዱ ስኬታማ ግብዣ 15 ETB ይሸለሙ!\n🔗 https://t.me/{me.username}?start={m.from_user.id}')
 
+  @bot.message_handler(commands=['register'])
   @bot.message_handler(func=lambda m: m.text == '📝 ምዝገባ (Register)')
   def c_reg(m):
     kb = RKB(resize_keyboard=True, one_time_keyboard=True); kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
     bot.send_message(m.chat.id, '📱 ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
 
+  @bot.message_handler(commands=['support'])
   @bot.message_handler(func=lambda m: m.text == '🎧 ድጋፍ (Support)')
   def c_sup(m): bot.send_message(m.chat.id, f'🎧 ድጋፍ፦ {SUPPORT}')
 
+  @bot.message_handler(commands=['rules'])
   @bot.message_handler(func=lambda m: m.text == '📜 ህግና መመሪያ')
   def c_rules(m): bot.send_message(m.chat.id, '📜 ህግና መመሪያ\n• ቢያንስ 2 ተጫዋቾች ካርድ ሲገዙ ይጀምራል።\n• ካርድ: 10/20/50 ብር (እስከ 4)።\n• ደራሽ: 80% ለአሸናፊው።\n• ዝቅተኛ ወጪ: 100 ETB።')
 
 def run_bot():
   if not bot: return print('WARNING: BOT_TOKEN not set; bot polling skipped.')
+  try:
+    # Telegram's native Menu button will show these slash commands.
+    public_commands = [
+      BotCommand('start', 'Start JANO BINGO'),
+      BotCommand('menu', 'Open the main menu'),
+      BotCommand('play', 'Play JANO BINGO'),
+      BotCommand('balance', 'Check your balance'),
+      BotCommand('deposit', 'Deposit funds'),
+      BotCommand('withdraw', 'Withdraw funds'),
+      BotCommand('invite', 'Invite friends'),
+      BotCommand('register', 'Register your phone number'),
+      BotCommand('support', 'Contact support'),
+      BotCommand('rules', 'Game rules')
+    ]
+    bot.set_my_commands(public_commands)
+    if ADMIN_ID:
+      bot.set_my_commands(public_commands + [BotCommand('admin', 'Open admin panel'), BotCommand('myid', 'Show Telegram ID'), BotCommand('voicesample', 'Generate Amharic voice sample')], scope=BotCommandScopeChat(ADMIN_ID))
+    print('Telegram command menu configured.')
+  except Exception as e:
+    print('Telegram command menu setup error:', e)
   while True:
     try: bot.infinity_polling(timeout=20, long_polling_timeout=15)
     except Exception as e: print('Bot error:', e); time.sleep(5)
