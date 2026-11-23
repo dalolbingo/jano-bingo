@@ -734,18 +734,9 @@ function showDepositAccount(method) {
   var tele = document.getElementById('depTeleLogo');
   var cbe = document.getElementById('depCbeLogo');
   clearTimeout(depSwitchTimer);
-  if (details.classList.contains('on') && methodLabel.textContent !== method) {
-    details.classList.add('switching');
-    depSwitchTimer = setTimeout(function() {
-      methodLabel.textContent = method;
-      details.classList.remove('switching');
-    }, 160);
-  } else {
-    methodLabel.textContent = method;
-    details.classList.add('on');
-    details.classList.remove('switching');
-  }
   details.classList.add('on');
+  details.classList.remove('switching');
+  methodLabel.textContent = method;
   tele.classList.toggle('active', method === 'TeleBirr');
   cbe.classList.toggle('active', method === 'CBE Birr');
 }
@@ -756,18 +747,9 @@ function showWithdrawMethod(method) {
   var tele = document.getElementById('wdTeleLogo');
   var cbe = document.getElementById('wdCbeLogo');
   clearTimeout(wdSwitchTimer);
-  if (details.classList.contains('on') && methodLabel.textContent !== method) {
-    details.classList.add('switching');
-    wdSwitchTimer = setTimeout(function() {
-      methodLabel.textContent = method;
-      details.classList.remove('switching');
-    }, 160);
-  } else {
-    methodLabel.textContent = method;
-    details.classList.add('on');
-    details.classList.remove('switching');
-  }
   details.classList.add('on');
+  details.classList.remove('switching');
+  methodLabel.textContent = method;
   tele.classList.toggle('active', method === 'TeleBirr');
   cbe.classList.toggle('active', method === 'CBE Birr');
 }
