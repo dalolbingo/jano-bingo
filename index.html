@@ -584,7 +584,11 @@ function renderState(d) {
         return '<div class="wc ' + c + '">' + v + '</div>';
       }).join('');
       document.getElementById('nxtTmr').textContent = r.winner_left;
-      document.getElementById('winOv').classList.add('on');
+      if (document.getElementById('tab-bingo').classList.contains('on')) {
+        document.getElementById('winOv').classList.add('on');
+      } else {
+        document.getElementById('winOv').classList.remove('on');
+      }
     } else {
       document.getElementById('winOv').classList.remove('on');
     }
@@ -712,6 +716,7 @@ function goTab(t) {
   document.querySelectorAll('.nbtn').forEach(function(e) { e.classList.remove('on'); });
   document.getElementById('tab-' + t).classList.add('on');
   document.querySelector('.nbtn[data-t="' + t + '"]').classList.add('on');
+  if (latestState) renderState(latestState);
 }
 function showDepositAccount(method) {
   var details = document.getElementById('depPayDetails');
