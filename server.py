@@ -297,6 +297,41 @@ def auth_user(init_data: str):
 bot = telebot.TeleBot(TOKEN) if TOKEN else None
 is_adm = lambda uid: ADMIN_ID != 0 and int(uid) == int(ADMIN_ID)
 
+def ensure_welcome_banner():
+  os.makedirs('static', exist_ok=True)
+  path = 'static/jano-bingo-welcome.jpg'
+  if os.path.exists(path): return path
+  w, h = 960, 600
+  im = Image.new('RGB', (w, h))
+  px = im.load()
+  for y in range(h):
+    for x in range(w):
+      glow = max(0, 1 - (((x-w/2)/(w*.8))**2 + ((y-h/2)/(h*.9))**2)**.5)
+      px[x,y] = (int(18+38*glow), int(4+5*glow), int(48+105*glow))
+  d = ImageDraw.Draw(im)
+  d.rounded_rectangle((14,14,w-14,h-14), radius=54, outline=(255,190,35), width=12)
+  d.rounded_rectangle((30,30,w-30,h-30), radius=42, outline=(176,70,255), width=5)
+  font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+  def font(size):
+    try: return ImageFont.truetype(font_path, size)
+    except Exception: return ImageFont.load_default()
+  # Crown above the JANO wordmark
+  cx = w//2
+  d.polygon([(cx-120,155),(cx-88,78),(cx-38,122),(cx,48),(cx+38,122),(cx+88,78),(cx+120,155)], fill=(255,190,30), outline=(255,235,130))
+  d.rounded_rectangle((cx-124,145,cx+124,174), radius=10, fill=(255,190,30), outline=(255,235,130), width=5)
+  def centered(txt, y, f, color, stroke=(20,0,35), sw=9):
+    b=d.textbbox((0,0),txt,font=f,stroke_width=sw)
+    d.text(((w-(b[2]-b[0]))//2,y),txt,font=f,fill=color,stroke_width=sw,stroke_fill=stroke)
+  centered('JANO',170,font(142),(255,207,48))
+  centered('BINGO',320,font(126),(220,62,255))
+  for x,y,n,c in [(115,300,'7',(40,125,255)),(845,300,'5',(240,65,80)),(155,465,'12',(40,200,110)),(805,465,'36',(155,80,255))]:
+    d.ellipse((x-52,y-52,x+52,y+52),fill=c,outline='white',width=7)
+    f=font(42); b=d.textbbox((0,0),n,font=f)
+    d.text((x-(b[2]-b[0])/2,y-(b[3]-b[1])/2-5),n,font=f,fill='white')
+  centered('PLAY  •  WIN  •  ENJOY',510,font(34),(255,220,100),sw=2)
+  im.save(path, 'JPEG', quality=88, optimize=True)
+  return path
+
 def menu_kb(uid=None):
   kb = IKB()
   kb.row(IBtn('🎮 Play JANO BINGO', web_app=WebAppInfo(url=APP_URL)))
@@ -401,7 +436,8 @@ if bot:
 
   @bot.message_handler(commands=['menu'])
   def c_menu(m):
-    bot.send_message(m.chat.id, f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to JANO BINGO!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id), disable_web_page_preview=True)
+    with open(ensure_welcome_banner(), 'rb') as photo:
+      bot.send_photo(m.chat.id, photo, caption=f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to JANO BINGO!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
 
   @bot.message_handler(commands=['start'])
   def c_start(m):
@@ -411,7 +447,8 @@ if bot:
     if not u['phone']:
       kb = RKB(resize_keyboard=True, one_time_keyboard=True); kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
       return bot.send_message(m.chat.id, '👑 እንኳን ወደ JANO BINGO በደህና መጡ!\n\nለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
-    bot.send_message(m.chat.id, f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to JANO BINGO!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id), disable_web_page_preview=True)
+    with open(ensure_welcome_banner(), 'rb') as photo:
+      bot.send_photo(m.chat.id, photo, caption=f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to JANO BINGO!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
 
   @bot.message_handler(content_types=['contact'])
   def c_contact(m):
