@@ -690,10 +690,19 @@ if bot:
 
   def s_bcast(m):
     if not is_adm(m.from_user.id): return
+    if m.content_type == 'text' and not (m.text or '').strip():
+      return bot.reply_to(m, '❌ ባዶ መልዕክት መላክ አይቻልም።')
+    if m.content_type != 'text' and m.content_type not in ('photo', 'video', 'document', 'animation', 'audio', 'voice', 'video_note', 'sticker'):
+      return bot.reply_to(m, '❌ ይህ የመልዕክት አይነት ገና አይደገፍም።')
     with get_db() as c: uids = [r[0] for r in c.execute('SELECT uid FROM users').fetchall()]
     s = 0
     for u in uids:
-      try: bot.send_message(u, f'📢 ማስታወቂያ\n\n{m.text}'); s += 1
+      try:
+        if m.content_type == 'text':
+          bot.send_message(u, f'📢 ማስታወቂያ\\n\\n{m.text}')
+        else:
+          bot.copy_message(u, m.chat.id, m.message_id)
+        s += 1
       except Exception: pass
     bot.reply_to(m, f'✅ ለ {s} ተጫዋቾች ተልኳል።')
 
