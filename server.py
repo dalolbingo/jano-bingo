@@ -658,6 +658,9 @@ async def api_wd(req: Request, x_tg_init_data: str = Header(default='')):
   try: amt = float(b.get('amount', 0))
   except (TypeError, ValueError): raise HTTPException(400, 'የገንዘብ መጠኑ ትክክል አይደለም!')
   ph = str(b.get('phone', '')).strip()
+  method = str(b.get('method', '')).strip()
+  if method not in ('TeleBirr', 'CBE Birr'):
+    raise HTTPException(400, 'የክፍያ ዘዴ ይምረጡ!')
   if not math.isfinite(amt) or amt < 100 or amt > 1000000 or len(ph) < 9 or len(ph) > 32:
     raise HTTPException(400, 'ዝቅተኛ 100 ETB እና ትክክለኛ ስልክ ያስገቡ!')
   with get_db() as c:
@@ -668,7 +671,7 @@ async def api_wd(req: Request, x_tg_init_data: str = Header(default='')):
     if cur.rowcount != 1: raise HTTPException(409, 'ባላንሱ ተቀይሯል፤ እንደገና ይሞክሩ።')
     add_tx(c, u['uid'], '💸', f'የወጪ ጥያቄ ({ph})', -amt)
     rid = c.execute('INSERT INTO requests (req_type,uid,amount,method,details,status,created_at) VALUES (?,?,?,?,?,?,?)',
-                    ('withdraw', u['uid'], amt, 'TeleBirr/CBE Birr', f'App Phone: {ph}', 'pending', int(time.time()))).lastrowid
+                    ('withdraw', u['uid'], amt, method, f'App Phone: {ph}', 'pending', int(time.time()))).lastrowid
   try:
     if bot and ADMIN_ID:
       kb = IKB()
