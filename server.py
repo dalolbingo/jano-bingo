@@ -648,7 +648,7 @@ async def api_dep(req: Request, x_tg_init_data: str = Header(default='')):
   tx = str(b.get('tx_id', '')).strip()
   if not math.isfinite(amt) or amt < 20 or amt > 1000000 or len(tx) < 4 or len(tx) > 120:
     raise HTTPException(400, 'ዝቅተኛ 20 ETB፣ ትክክለኛ Transaction ID እና ተገቢ መጠን ያስገቡ!')
-  try: notify_req('deposit', u['uid'], amt, 'TeleBirr/CBE', f'App TX: {tx}', reference=tx)
+  try: notify_req('deposit', u['uid'], amt, 'TeleBirr/CBE Birr', f'App TX: {tx}', reference=tx)
   except psycopg.IntegrityError: raise HTTPException(409, 'ይህ Transaction ID ቀድሞ ተጠቅሟል!')
   return {'ok': True}
 
@@ -668,7 +668,7 @@ async def api_wd(req: Request, x_tg_init_data: str = Header(default='')):
     if cur.rowcount != 1: raise HTTPException(409, 'ባላንሱ ተቀይሯል፤ እንደገና ይሞክሩ።')
     add_tx(c, u['uid'], '💸', f'የወጪ ጥያቄ ({ph})', -amt)
     rid = c.execute('INSERT INTO requests (req_type,uid,amount,method,details,status,created_at) VALUES (?,?,?,?,?,?,?)',
-                    ('withdraw', u['uid'], amt, 'TeleBirr/CBE', f'App Phone: {ph}', 'pending', int(time.time()))).lastrowid
+                    ('withdraw', u['uid'], amt, 'TeleBirr/CBE Birr', f'App Phone: {ph}', 'pending', int(time.time()))).lastrowid
   try:
     if bot and ADMIN_ID:
       kb = IKB()
