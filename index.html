@@ -278,7 +278,7 @@ body.light .status-banner{color:#1d4ed8}
   </section>
 
   <section id="tab-rank" class="tab">
-    <div class="shd"><span>🏆 እውነተኛ ከፍተኛ አሸናፊዎች</span></div>
+    <div class="shd"><span>🏆 ከፍተኛ አሸናፊዎች</span></div>
     <div id="rList"></div>
   </section>
 
@@ -573,7 +573,7 @@ function renderState(d) {
       }
       document.getElementById('wttl').textContent = '🏆 BINGO! 🏆';
       document.getElementById('wName').textContent = '👑 ' + w.name + ' #' + w.card_no;
-      document.getElementById('wPrz').textContent = w.is_bot ? 'BOT WINNER · NO PAYOUT' : w.prize + ' ETB';
+      document.getElementById('wPrz').textContent = w.prize.toFixed(2) + ' ETB';
       document.getElementById('wLbl').textContent = w.name + ' (CARD #' + w.card_no + ')';
       document.getElementById('wGrd').innerHTML = w.grid.map(function(v, idx) {
         var c = w.win_line.indexOf(idx) > -1 ? 'wl' : (v === 'FREE' || calMap[v]) ? 'cal' : '';
