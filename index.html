@@ -164,7 +164,6 @@ body.light .status-banner{color:#1d4ed8}
       <img class="badge" src="/static/jano-bingo-icon.svg" alt="JANO BINGO" />
       <div>
         <div class="btitle">JANO BINGO</div>
-        <span id="liveLabel" class="live-pill">● LIVE REAL MONEY</span>
       </div>
     </div>
     <div class="hact">
@@ -451,7 +450,6 @@ function checkWinLocal(grid, markMap) {
 function renderState(d) {
   latestState = d;
   var u = d.user, r = d.room, cfg = d.config;
-  document.getElementById('liveLabel').textContent = '● NEON TEST';
   ['demoInfo','demoPlayInfo'].forEach(function(id) {
     var el = document.getElementById(id);
     el.textContent = '';
