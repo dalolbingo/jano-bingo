@@ -376,7 +376,7 @@ def ensure_welcome_banner():
 DAILY_PROMO_SLOTS = {
   'morning': {'hour': 9, 'caption': '🌅 ጃኖ ቢንጎ! ዛሬስ ማን ያሸንፋል? 🔥\n\nአዲስ ቀን፣ አዲስ እድል! አሁኑኑ ይግቡና ይጫወቱ።'},
   'afternoon': {'hour': 13, 'caption': '🏆 እድልህን ሞክር፤ የድል ቀንህ ዛሬ ይሁን!\n\nየምትወደውን ካርድ ምረጥ፤ ጨዋታህን ጀምር! 🎯'},
-  'evening': {'hour': 19, 'caption': '🌙 ጓደኞችህ እየተጫወቱ ነው፤ አንተስ?\n\nየምሽቱን ጨዋታ አት пропልጥ! አሁኑኑ ጃኖ ቢንጎን ክፈት። ✨'}
+  'evening': {'hour': 19, 'caption': '🌙 ጓደኞችህ እየተጫወቱ ነው፤ አንተስ?\n\nየምሽቱን ጨዋታ አትዘግይ! አሁኑኑ ጃኖ ቢንጎን ክፈት። ✨'}
 }
 PROMO_LOCK = threading.Lock()
 
