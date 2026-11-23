@@ -335,14 +335,18 @@ def addis_voice_sample():
   api_key = os.environ.get('ADDIS_API_KEY', '').strip()
   if not api_key:
     raise RuntimeError('ADDIS_API_KEY is not configured on this service.')
-  base = 'https://api.addisassistant.com/api/v1'
+  base = 'https://api.addisassistant.com'
   headers = {'x-api-key': api_key, 'Content-Type': 'application/json'}
   text = 'ሰላም፣ የጃኖ ቢንጎ ተጫዋቾች። ቢ አስራ ሁለት።'
   payload = {'text': text, 'voice_id': 'am-yohanes-calm', 'language': 'am', 'output_format': 'mp3_44100'}
   def post_json(path, body):
-    req = urllib.request.Request(base + path, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
-    with urllib.request.urlopen(req, timeout=45) as response:
-      return json.loads(response.read().decode('utf-8'))
+    req = urllib.request.Request(base + '/api/v1' + path, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
+    try:
+      with urllib.request.urlopen(req, timeout=45) as response:
+        return json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+      detail = e.read().decode('utf-8', errors='replace')
+      raise RuntimeError(f'Addis AI HTTP {e.code}: {detail[:500]}') from None
   estimate = post_json('/voice/estimate', payload)
   est = estimate.get('data', estimate)
   if est.get('can_generate') is False:
