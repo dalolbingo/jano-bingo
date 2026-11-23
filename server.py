@@ -390,6 +390,7 @@ def adm_kb():
   kb.row(IBtn('➕ ብር ጨምር', callback_data='adm_add'), IBtn('➖ ብር ቀንስ', callback_data='adm_sub'))
   kb.row(IBtn(f'⚙️ ዝቅተኛ ተጫዋች: {MIN_PLAYERS}', callback_data='adm_minp'), IBtn('💾 DB Backup', callback_data='adm_backup'))
   kb.row(IBtn('📢 ለሁሉም መልዕክት ላክ', callback_data='adm_bcast'))
+  kb.row(IBtn('🧹 Reset Rankings', callback_data='adm_reset_rank'))
   return kb
 
 def notify_req(rtype, uid, amt, md, det, reference=None):
@@ -624,6 +625,18 @@ if bot:
       bot.send_message(call.message.chat.id, f'⚙️ ዝቅተኛ ተጫዋች ወደ {MIN_PLAYERS} ተቀይሯል።')
     elif d == 'adm_backup':
       bot.send_message(call.message.chat.id, '💾 Database is hosted on Neon PostgreSQL. Use Neon backup/restore tools for database backups.')
+    elif d == 'adm_reset_rank':
+      kb = IKB()
+      kb.row(IBtn('✅ Confirm reset', callback_data='adm_reset_rank_confirm'), IBtn('❌ Cancel', callback_data='adm_reset_rank_cancel'))
+      bot.send_message(call.message.chat.id, '⚠️ Reset leaderboard totals for all real players and clear bot rankings? Wallets, deposits, withdrawals, transactions, match counts and win counts will remain unchanged.', reply_markup=kb)
+    elif d == 'adm_reset_rank_cancel':
+      bot.send_message(call.message.chat.id, 'Reset cancelled. No ranking data was changed.')
+    elif d == 'adm_reset_rank_confirm':
+      with get_db() as c:
+        c.execute('BEGIN')
+        c.execute('UPDATE users SET total_won=0')
+        c.execute('DELETE FROM bot_rankings')
+      bot.send_message(call.message.chat.id, '✅ Test leaderboard reset complete. Player wallets, transactions, deposits, withdrawals, match counts and win counts were preserved.')
     elif d == 'adm_bcast':
       bot.register_next_step_handler(bot.send_message(call.message.chat.id, '📢 ለሁሉም የሚላከውን መልዕክት ይጻፉ፦'), s_bcast)
     elif d.startswith(('ap_', 'rj_')):
