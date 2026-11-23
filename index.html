@@ -120,7 +120,7 @@ body.light .status-banner{color:#1d4ed8}
 .btnw{padding:12px;border-radius:12px;border:none;background:var(--ggrad);color:#090d16;font-size:13px;font-weight:800;cursor:pointer}
 .drw{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}.drw.on{display:block}
 .abox{background:var(--card2);border:1px solid var(--bdg);border-radius:12px;padding:12px;margin-bottom:10px}
-.pay-logos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px}.pay-logo-card{min-height:82px;padding:10px;border:2px solid transparent;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.16)}.pay-logo-card.cbe-card{background:#882b7a;overflow:hidden}.pay-logo-card.active{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.18)}.pay-logo-img{display:block;max-width:100%;height:54px;object-fit:contain}.pay-logo-img.tele-logo{width:58px;height:58px}.pay-logo-img.cbe-logo{width:126px;height:58px}.pay-content{max-height:0;opacity:0;transform:translateY(-8px);overflow:hidden;pointer-events:none;transition:max-height .45s ease,opacity .3s ease,transform .3s ease}.pay-content.on{max-height:420px;opacity:1;transform:translateY(0);pointer-events:auto}
+.pay-logos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px}.pay-logo-card{min-height:82px;padding:10px;border:2px solid transparent;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.16);transition:border-color .3s ease,box-shadow .3s ease,transform .3s ease}.pay-logo-card:active{transform:scale(.97)}.pay-logo-card.cbe-card{background:#882b7a;overflow:hidden}.pay-logo-card.active{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.18)}.pay-logo-img{display:block;max-width:100%;height:54px;object-fit:contain}.pay-logo-img.tele-logo{width:58px;height:58px}.pay-logo-img.cbe-logo{width:126px;height:58px}.pay-content{max-height:0;opacity:0;transform:translateY(-8px);overflow:hidden;pointer-events:none;transition:max-height .45s ease,opacity .3s ease,transform .3s ease}.pay-content.on{max-height:420px;opacity:1;transform:translateY(0);pointer-events:auto}.pay-content.switching{opacity:0;transform:translateY(6px)}
 .arow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13.5px}
 .cmini{padding:5px 10px;border-radius:7px;border:none;background:var(--ggrad);color:#090d16;font-size:11px;font-weight:800;cursor:pointer}
 .fstack{display:flex;flex-direction:column;gap:9px}
@@ -720,11 +720,24 @@ function goTab(t) {
   document.querySelector('.nbtn[data-t="' + t + '"]').classList.add('on');
   if (latestState) renderState(latestState);
 }
+var depSwitchTimer = null;
 function showDepositAccount(method) {
   var details = document.getElementById('depPayContent');
+  var methodLabel = document.getElementById('depPayMethod');
   var tele = document.getElementById('depTeleLogo');
   var cbe = document.getElementById('depCbeLogo');
-  document.getElementById('depPayMethod').textContent = method;
+  clearTimeout(depSwitchTimer);
+  if (details.classList.contains('on') && methodLabel.textContent !== method) {
+    details.classList.add('switching');
+    depSwitchTimer = setTimeout(function() {
+      methodLabel.textContent = method;
+      details.classList.remove('switching');
+    }, 160);
+  } else {
+    methodLabel.textContent = method;
+    details.classList.add('on');
+    details.classList.remove('switching');
+  }
   details.classList.add('on');
   tele.classList.toggle('active', method === 'TeleBirr');
   cbe.classList.toggle('active', method === 'CBE Birr');
