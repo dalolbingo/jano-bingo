@@ -170,7 +170,8 @@ def seed_bots(r):
   r['bot_start_at'] = time.time()
   r['bot_index'] = 0
 for room in rooms.values():
-  seed_bots(room)
+  if room['stake'] == 10:
+    seed_bots(room)
 real_players = lambda r: len({v['uid'] for v in r['cards'].values() if v['uid'] > 0})
 bot_players = lambda r: sum(1 for v in r['cards'].values() if v.get('is_bot'))
 n_players = lambda r: real_players(r) + bot_players(r)
@@ -208,7 +209,10 @@ def reset_room(r):
   with get_db() as c:
     c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
   r.update({'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'winner': None, 'tick': time.time()})
-  seed_bots(r)
+  if r['stake'] == 10:
+    seed_bots(r)
+  else:
+    r.update({'bot_queue': [], 'bot_start_at': None, 'bot_index': 0})
 
 def game_loop():
   while True:
@@ -217,7 +221,7 @@ def game_loop():
       for r in rooms.values():
         # Bots begin selecting cards automatically as soon as a round is seeded,
         # even when no real player has joined yet.
-        if r['bot_start_at'] is not None and r['phase'] in ('WAITING', 'COUNTDOWN'):
+        if r['stake'] == 10 and r['bot_start_at'] is not None and r['phase'] in ('WAITING', 'COUNTDOWN'):
           elapsed = now - r['bot_start_at']
           while r['bot_index'] < len(r['bot_queue']) and elapsed >= r['bot_queue'][r['bot_index']]['at']:
             used = set(r['cards'])
