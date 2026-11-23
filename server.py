@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 import telebot
-from telebot.types import InlineKeyboardButton as IBtn, InlineKeyboardMarkup as IKB, KeyboardButton as KBtn, ReplyKeyboardMarkup as RKB, WebAppInfo, BotCommand, BotCommandScopeChat
+from telebot.types import InlineKeyboardButton as IBtn, InlineKeyboardMarkup as IKB, KeyboardButton as KBtn, ReplyKeyboardMarkup as RKB, ReplyKeyboardRemove, WebAppInfo, BotCommand, BotCommandScopeChat
 
 TOKEN = os.environ.get('BOT_TOKEN', '').strip().strip("'\"")
 try: ADMIN_ID = int(os.environ.get('ADMIN_ID', '0').strip().strip("'\"") or '0')
@@ -298,12 +298,14 @@ bot = telebot.TeleBot(TOKEN) if TOKEN else None
 is_adm = lambda uid: ADMIN_ID != 0 and int(uid) == int(ADMIN_ID)
 
 def menu_kb(uid=None):
-  kb = RKB(resize_keyboard=True)
-  kb.row(KBtn('🎮 Play JANO BINGO'))
-  kb.row(KBtn('💰 ገቢ (Deposit)'), KBtn('💸 ወጪ (Withdraw)'))
-  kb.row(KBtn('💳 ባላንስ (Balance)'), KBtn('👥 ግብዣ (Invite)'))
-  kb.row(KBtn('📝 ምዝገባ (Register)'), KBtn('🎧 ድጋፍ (Support)'))
-  kb.row(KBtn('📜 ህግና መመሪያ'), KBtn('👑 Admin Panel')) if (uid and is_adm(uid)) else kb.row(KBtn('📜 ህግና መመሪያ'))
+  kb = IKB()
+  kb.row(IBtn('🎮 Play JANO BINGO', web_app=WebAppInfo(url=APP_URL)))
+  kb.row(IBtn('💰 Deposit', callback_data='home_deposit'), IBtn('💸 Withdraw', callback_data='home_withdraw'))
+  kb.row(IBtn('💳 Balance', callback_data='home_balance'), IBtn('👥 Invite Friends', callback_data='home_invite'))
+  kb.row(IBtn('🎯 Game Patterns', web_app=WebAppInfo(url=APP_URL)), IBtn('📖 Instructions', callback_data='home_rules'))
+  kb.row(IBtn('📝 Register', callback_data='home_register'), IBtn('🎧 Support', url=f'https://t.me/{SUPPORT.lstrip("@")}'))
+  if uid and is_adm(uid):
+    kb.row(IBtn('👑 Admin Panel', callback_data='home_admin'))
   return kb
 
 def play_kb(lbl='🎲 Play JANO BINGO'):
@@ -399,8 +401,7 @@ if bot:
 
   @bot.message_handler(commands=['menu'])
   def c_menu(m):
-    bot.send_message(m.chat.id, '📋 JANO BINGO — ዋና ምናሌ', reply_markup=menu_kb(m.from_user.id))
-    bot.send_message(m.chat.id, '🎰 ጨዋታውን ለመክፈት ከታች ይጫኑ 👇', reply_markup=play_kb('🎮 Play Now'))
+    bot.send_message(m.chat.id, f'👋 ሰላም {m.from_user.first_name or "Player"}!\\n\\n🎉 Welcome to JANO BINGO!\\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id), disable_web_page_preview=True)
 
   @bot.message_handler(commands=['start'])
   def c_start(m):
@@ -410,15 +411,14 @@ if bot:
     if not u['phone']:
       kb = RKB(resize_keyboard=True, one_time_keyboard=True); kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
       return bot.send_message(m.chat.id, '👑 እንኳን ወደ JANO BINGO በደህና መጡ!\n\nለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
-    bot.send_message(m.chat.id, f'👑 ወደ JANO BINGO በደህና መጡ!\n🎧 ድጋፍ፦ {SUPPORT}', reply_markup=menu_kb(m.from_user.id))
-    bot.send_message(m.chat.id, '🎰 ጨዋታውን ለመክፈት ከታች ይጫኑ 👇', reply_markup=play_kb('🎮 Play Now'))
+    bot.send_message(m.chat.id, f'👋 ሰላም {m.from_user.first_name or "Player"}!\\n\\n🎉 Welcome to JANO BINGO!\\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id), disable_web_page_preview=True)
 
   @bot.message_handler(content_types=['contact'])
   def c_contact(m):
     ensure_user(m.from_user.id, m.from_user.first_name or 'Player')
     with get_db() as c: c.execute('UPDATE users SET phone=? WHERE uid=?', (m.contact.phone_number, m.from_user.id))
-    bot.send_message(m.chat.id, f'✅ ተመዝግበዋል! ({m.contact.phone_number})', reply_markup=menu_kb(m.from_user.id))
-    bot.send_message(m.chat.id, '🎰 ጨዋታውን ለመክፈት ከታች ይጫኑ 👇', reply_markup=play_kb('🎮 Play Now'))
+    bot.send_message(m.chat.id, f'✅ ተመዝግበዋል! ({m.contact.phone_number})', reply_markup=ReplyKeyboardRemove())
+    bot.send_message(m.chat.id, '👋 Welcome to JANO BINGO! Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
 
   @bot.message_handler(commands=['play'])
   @bot.message_handler(func=lambda m: m.text == '🎮 Play JANO BINGO')
@@ -603,6 +603,29 @@ if bot:
     support_url = f"https://t.me/{SUPPORT.lstrip('@')}"
     kb = IKB(); kb.add(IBtn('💬 የድጋፍ ቡድንን ያነጋግሩ / Contact Support', url=support_url))
     bot.send_message(m.chat.id, f'🎧 የJANO BINGO ድጋፍ\n\nለእርዳታ ከዚህ ይጻፉ፦ {SUPPORT}\n\nContact our support account:', reply_markup=kb, disable_web_page_preview=True)
+
+  @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('home_'))
+  def cb_home_menu(call):
+    bot.answer_callback_query(call.id)
+    uid = call.from_user.id
+    if call.data == 'home_deposit':
+      c_dep(call.message)
+    elif call.data == 'home_withdraw':
+      c_wd(call.message)
+    elif call.data == 'home_balance':
+      u = ensure_user(uid, call.from_user.first_name or 'Player')
+      bot.send_message(call.message.chat.id, f'💰 ጠቅላላ ባላንስ: {u["play_wallet"]:.2f} ETB')
+    elif call.data == 'home_invite':
+      me = bot.get_me()
+      bot.send_message(call.message.chat.id, f'🎁 ለእያንዳንዱ ስኬታማ ግብዣ 15 ETB ይሸለሙ!\\n🔗 https://t.me/{me.username}?start={uid}')
+    elif call.data == 'home_register':
+      kb = RKB(resize_keyboard=True, one_time_keyboard=True)
+      kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
+      bot.send_message(call.message.chat.id, '📱 ለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
+    elif call.data == 'home_rules':
+      c_rules(call.message)
+    elif call.data == 'home_admin':
+      if is_adm(uid): bot.send_message(call.message.chat.id, '👑 JANO BINGO — የአድሚን መቆጣጠሪያ', reply_markup=adm_kb())
 
   @bot.message_handler(commands=['rules'])
   @bot.message_handler(func=lambda m: m.text == '📜 ህግና መመሪያ')
