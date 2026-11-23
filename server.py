@@ -1,4 +1,4 @@
-import hashlib, hmac, json, math, os, random, secrets, threading, time, urllib.parse
+import hashlib, hmac, io, json, math, os, random, secrets, threading, time, urllib.parse, urllib.request
 import psycopg
 from contextlib import contextmanager
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -330,7 +330,56 @@ def notify_req(rtype, uid, amt, md, det, reference=None):
   except Exception: pass
   return rid
 
+
+def addis_voice_sample():
+  api_key = os.environ.get('ADDIS_API_KEY', '').strip()
+  if not api_key:
+    raise RuntimeError('ADDIS_API_KEY is not configured on this service.')
+  base = 'https://api.addisassistant.com/api/v1'
+  headers = {'x-api-key': api_key, 'Content-Type': 'application/json'}
+  text = 'ሰላም፣ የጃኖ ቢንጎ ተጫዋቾች። ቢ አስራ ሁለት።'
+  payload = {'text': text, 'voice_id': 'am-yohanes-calm', 'language': 'am', 'output_format': 'mp3_44100'}
+  def post_json(path, body):
+    req = urllib.request.Request(base + path, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
+    with urllib.request.urlopen(req, timeout=45) as response:
+      return json.loads(response.read().decode('utf-8'))
+  estimate = post_json('/voice/estimate', payload)
+  est = estimate.get('data', estimate)
+  if est.get('can_generate') is False:
+    raise RuntimeError('Addis AI reports insufficient voice-generation balance.')
+  request_id = 'jano-voice-sample-' + secrets.token_hex(12)
+  generated = post_json('/voice/generations', dict(payload, client_request_id=request_id))
+  data = generated.get('data', generated)
+  audio_url = data.get('audio_url')
+  if not audio_url:
+    raise RuntimeError('Addis AI did not return an audio URL.')
+  req = urllib.request.Request(audio_url, headers={'User-Agent': 'JANO-BINGO/1.0'})
+  with urllib.request.urlopen(req, timeout=45) as response:
+    audio = io.BytesIO(response.read())
+  audio.name = 'jano-bingo-amharic-male-sample.mp3'
+  audio.seek(0)
+  return audio, est.get('estimated_cost'), data.get('id')
+
+
 if bot:
+
+  @bot.message_handler(commands=['voicesample'])
+  def c_voice_sample(m):
+    if not is_adm(m.from_user.id):
+      return bot.reply_to(m, '⛔ ለአድሚን ብቻ!')
+    if not os.environ.get('ADDIS_API_KEY', '').strip():
+      return bot.reply_to(m, '❌ ADDIS_API_KEY በ Neon test Render ላይ አልተገኘም።')
+    status = bot.reply_to(m, '🎙️ የአማርኛ የወንድ ድምፅ ናሙና እየተዘጋጀ ነው...')
+    try:
+      audio, cost, clip_id = addis_voice_sample()
+      bot.send_audio(m.chat.id, audio, caption='🎙️ JANO BINGO — Yohannes የአማርኛ ድምፅ ናሙና')
+      note = '✅ ናሙናው ተልኳል። ድምፁን ያዳምጡና ይወስኑ።'
+      if cost is not None: note += f'\nየተገመተ ወጪ: {cost} ETB'
+      bot.send_message(m.chat.id, note)
+    except Exception as e:
+      print('Addis voice sample error:', type(e).__name__, str(e)[:300])
+      bot.send_message(m.chat.id, '❌ የድምፅ ናሙና ማዘጋጀት አልተሳካም። Render logs ይፈትሹ።')
+
   @bot.message_handler(commands=['myid'])
   def c_myid(m): bot.reply_to(m, f'🆔 የአንተ Telegram ID፦ `{m.from_user.id}`', parse_mode='Markdown')
 
