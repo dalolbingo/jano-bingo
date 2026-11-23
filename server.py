@@ -301,36 +301,64 @@ is_adm = lambda uid: ADMIN_ID != 0 and int(uid) == int(ADMIN_ID)
 def ensure_welcome_banner():
   os.makedirs('static', exist_ok=True)
   path = 'static/jano-bingo-welcome.jpg'
-  if os.path.exists(path): return path
-  w, h = 960, 600
+  w, h = 1280, 720
   im = Image.new('RGB', (w, h))
   px = im.load()
   for y in range(h):
     for x in range(w):
-      glow = max(0, 1 - (((x-w/2)/(w*.8))**2 + ((y-h/2)/(h*.9))**2)**.5)
-      px[x,y] = (int(18+38*glow), int(4+5*glow), int(48+105*glow))
-  d = ImageDraw.Draw(im)
-  d.rounded_rectangle((14,14,w-14,h-14), radius=54, outline=(255,190,35), width=12)
-  d.rounded_rectangle((30,30,w-30,h-30), radius=42, outline=(176,70,255), width=5)
-  font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
-  def font(size):
-    try: return ImageFont.truetype(font_path, size)
+      dx=(x-w/2)/(w*.78); dy=(y-h/2)/(h*.95)
+      glow=max(0,1-(dx*dx+dy*dy)**0.5)
+      px[x,y]=(int(9+31*glow),int(2+5*glow),int(36+104*glow))
+  d=ImageDraw.Draw(im)
+  # Layered gold and violet frame
+  d.rounded_rectangle((16,16,w-16,h-16),radius=74,outline=(255,184,25),width=18)
+  d.rounded_rectangle((36,36,w-36,h-36),radius=60,outline=(255,222,91),width=5)
+  d.rounded_rectangle((48,48,w-48,h-48),radius=52,outline=(177,54,255),width=8)
+  font_path='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+  def font(sz):
+    try: return ImageFont.truetype(font_path,sz)
     except Exception: return ImageFont.load_default()
-  # Crown above the Jano wordmark
-  cx = w//2
-  d.polygon([(cx-120,155),(cx-88,78),(cx-38,122),(cx,48),(cx+38,122),(cx+88,78),(cx+120,155)], fill=(255,190,30), outline=(255,235,130))
-  d.rounded_rectangle((cx-124,145,cx+124,174), radius=10, fill=(255,190,30), outline=(255,235,130), width=5)
-  def centered(txt, y, f, color, stroke=(20,0,35), sw=9):
-    b=d.textbbox((0,0),txt,font=f,stroke_width=sw)
-    d.text(((w-(b[2]-b[0]))//2,y),txt,font=f,fill=color,stroke_width=sw,stroke_fill=stroke)
-  centered('Jano',170,font(142),(255,207,48))
-  centered('Bingo',320,font(126),(220,62,255))
-  for x,y,n,c in [(115,300,'7',(40,125,255)),(845,300,'5',(240,65,80)),(155,465,'12',(40,200,110)),(805,465,'36',(155,80,255))]:
-    d.ellipse((x-52,y-52,x+52,y+52),fill=c,outline='white',width=7)
-    f=font(42); b=d.textbbox((0,0),n,font=f)
-    d.text((x-(b[2]-b[0])/2,y-(b[3]-b[1])/2-5),n,font=f,fill='white')
-  centered('PLAY  •  WIN  •  ENJOY',510,font(34),(255,220,100),sw=2)
-  im.save(path, 'JPEG', quality=88, optimize=True)
+  # Crown
+  cx=w//2
+  d.polygon([(cx-145,218),(cx-111,110),(cx-49,174),(cx,62),(cx+49,174),(cx+111,110),(cx+145,218)],
+            fill=(255,188,20),outline=(255,229,111),width=7)
+  d.rounded_rectangle((cx-151,203,cx+151,239),radius=15,fill=(255,195,25),outline=(255,230,120),width=6)
+  # Text with shadow, thick dark outline, and warm gradient fill
+  def gradient_word(word, top, size, c1, c2):
+    f=font(size)
+    mask=Image.new('L',(w,h),0); md=ImageDraw.Draw(mask)
+    box=md.textbbox((0,0),word,font=f,stroke_width=0)
+    tw,th=box[2]-box[0],box[3]-box[1]
+    x=(w-tw)//2-box[0]
+    md.text((x,top),word,font=f,fill=255)
+    shadow=Image.new('RGBA',(w,h),(0,0,0,0)); sd=ImageDraw.Draw(shadow)
+    sd.text((x+7,top+13),word,font=f,fill=(0,0,0,170),stroke_width=19,stroke_fill=(0,0,0,210))
+    im.paste(shadow,(0,0),shadow)
+    outline=Image.new('RGBA',(w,h),(0,0,0,0)); od=ImageDraw.Draw(outline)
+    od.text((x,top),word,font=f,fill=(255,255,255,0),stroke_width=18,stroke_fill=(15,0,28,255))
+    im.paste(outline,(0,0),outline)
+    grad=Image.new('RGB',(w,h),c1); gp=grad.load()
+    for yy in range(max(0,top),min(h,top+size+40)):
+      t=max(0,min(1,(yy-top)/max(1,size+20)))
+      col=tuple(int(c1[i]*(1-t)+c2[i]*t) for i in range(3))
+      for xx in range(w): gp[xx,yy]=col
+    im.paste(grad,(0,0),mask)
+    d2=ImageDraw.Draw(im)
+    d2.text((x,top),word,font=f,fill=(255,255,255,0),stroke_width=5,stroke_fill=(255,225,150,190))
+  gradient_word('JANO',250,166,(255,225,82),(255,155,20))
+  gradient_word('BINGO',410,150,(255,87,241),(174,30,239))
+  d=ImageDraw.Draw(im)
+  # Bingo balls framing the wordmark
+  balls=[(145,345,'7',(39,128,255)),(1135,345,'5',(239,61,88)),(200,535,'12',(35,195,112)),(1080,535,'36',(154,76,245))]
+  for x,y,n,c in balls:
+    d.ellipse((x-61,y-61,x+61,y+61),fill=(245,245,255),outline=(255,255,255),width=5)
+    d.ellipse((x-53,y-53,x+53,y+53),fill=c)
+    f=font(48); bb=d.textbbox((0,0),n,font=f)
+    d.text((x-(bb[2]-bb[0])/2,y-(bb[3]-bb[1])/2-8),n,font=f,fill='white',stroke_width=1,stroke_fill=(255,255,255))
+  slogan='PLAY  •  WIN  •  ENJOY'
+  f=font(42); bb=d.textbbox((0,0),slogan,font=f)
+  d.text(((w-(bb[2]-bb[0]))//2,615),slogan,font=f,fill=(255,214,87),stroke_width=2,stroke_fill=(35,8,35))
+  im.save(path,'JPEG',quality=94,optimize=True,progressive=True)
   return path
 
 def menu_kb(uid=None):
