@@ -1,4 +1,5 @@
 import hashlib, hmac, io, json, math, os, random, secrets, threading, time, urllib.parse, urllib.request
+from zoneinfo import ZoneInfo
 import psycopg
 from contextlib import contextmanager
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -119,6 +120,7 @@ def init_db():
       PRIMARY KEY (stake, card_no))""")
     c.execute('INSERT INTO house_stats (id,total_commission,total_rounds) VALUES (1,0,0) ON CONFLICT (id) DO NOTHING')
     c.execute("CREATE TABLE IF NOT EXISTS bot_settings (setting_key TEXT PRIMARY KEY, image_data BYTEA, updated_at BIGINT)")
+    c.execute("CREATE TABLE IF NOT EXISTS daily_promo_sends (send_date TEXT NOT NULL, slot TEXT NOT NULL, sent_at BIGINT NOT NULL, PRIMARY KEY (send_date,slot))")
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_requests_reference ON requests(reference) WHERE reference IS NOT NULL AND reference <> ''")
 
 def recover_interrupted_games():
@@ -369,6 +371,117 @@ def ensure_welcome_banner():
   d.text(((w-(bb[2]-bb[0]))//2,615),slogan,font=f,fill=(255,214,87),stroke_width=2,stroke_fill=(35,8,35))
   im.save(path,'JPEG',quality=94,optimize=True,progressive=True)
   return path
+
+
+DAILY_PROMO_SLOTS = {
+  'morning': {'hour': 9, 'caption': '🌅 ጃኖ ቢንጎ! ዛሬስ ማን ያሸንፋል? 🔥\n\nአዲስ ቀን፣ አዲስ እድል! አሁኑኑ ይግቡና ይጫወቱ።'},
+  'afternoon': {'hour': 13, 'caption': '🏆 እድልህን ሞክር፤ የድል ቀንህ ዛሬ ይሁን!\n\nየምትወደውን ካርድ ምረጥ፤ ጨዋታህን ጀምር! 🎯'},
+  'evening': {'hour': 19, 'caption': '🌙 ጓደኞችህ እየተጫወቱ ነው፤ አንተስ?\n\nየምሽቱን ጨዋታ አት пропልጥ! አሁኑኑ ጃኖ ቢንጎን ክፈት። ✨'}
+}
+PROMO_LOCK = threading.Lock()
+
+def ensure_daily_promo_images():
+  os.makedirs('static', exist_ok=True)
+  palettes = {
+    'morning': ((16, 35, 91), (111, 43, 170), (255, 190, 45), (255, 91, 130)),
+    'afternoon': ((6, 69, 83), (15, 133, 133), (255, 205, 65), (255, 121, 47)),
+    'evening': ((13, 8, 42), (65, 24, 115), (255, 190, 45), (215, 75, 255))
+  }
+  for slot, (top, bottom, gold, accent) in palettes.items():
+    path = f'static/jano-bingo-{slot}.jpg'
+    if os.path.exists(path):
+      continue
+    w, h = 720, 1280
+    im = Image.new('RGB', (w, h))
+    px = im.load()
+    for y in range(h):
+      t = y / max(1, h - 1)
+      base = tuple(int(top[i] * (1-t) + bottom[i] * t) for i in range(3))
+      for x in range(w):
+        glow = max(0, 1 - (((x-w*.5)/(w*.8))**2 + ((y-h*.43)/(h*.8))**2)**.5)
+        px[x,y] = tuple(min(255, int(base[i] + glow * (gold[i]-base[i]) * .18)) for i in range(3))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((18,18,w-18,h-18), radius=54, outline=gold, width=12)
+    d.rounded_rectangle((37,37,w-37,h-37), radius=42, outline=accent, width=5)
+    font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+    def f(sz):
+      try: return ImageFont.truetype(font_path, sz)
+      except Exception: return ImageFont.load_default()
+    # Decorative bingo balls, with a different composition for each posting time.
+    positions = ([(115,340),(605,520),(145,820),(575,990)] if slot == 'morning'
+                 else [(110,460),(610,350),(120,900),(590,800)] if slot == 'afternoon'
+                 else [(115,360),(600,430),(140,920),(580,1000)])
+    ballcols = [(53,135,255),(232,62,98),(36,190,125),(153,75,245)]
+    for i, (x,y) in enumerate(positions):
+      rad = 66 if i % 2 == 0 else 54
+      d.ellipse((x-rad,y-rad,x+rad,y+rad), fill=(248,247,255), outline=gold, width=6)
+      d.ellipse((x-rad+8,y-rad+8,x+rad-8,y+rad-8), fill=ballcols[i])
+      num = str([7,18,42,63][i])
+      bb = d.textbbox((0,0), num, font=f(42))
+      d.text((x-(bb[2]-bb[0])/2,y-(bb[3]-bb[1])/2-5), num, font=f(42), fill='white')
+    # Central crown and strong wordmark.
+    cx = w//2
+    d.polygon([(cx-105,250),(cx-80,165),(cx-32,225),(cx,125),(cx+32,225),(cx+80,165),(cx+105,250)],
+              fill=gold, outline=(255,239,170))
+    d.rounded_rectangle((cx-110,238,cx+110,270), radius=12, fill=gold)
+    for word, y, size, color in [('JANO', 490, 105, gold), ('BINGO', 605, 100, (255,225,255))]:
+      ft = f(size)
+      bb = d.textbbox((0,0), word, font=ft, stroke_width=5)
+      x = (w-(bb[2]-bb[0]))//2
+      d.text((x+5,y+8), word, font=ft, fill=(0,0,0), stroke_width=8, stroke_fill=(0,0,0))
+      d.text((x,y), word, font=ft, fill=color, stroke_width=5, stroke_fill=(38,10,54))
+    slogan = {'morning':'A NEW DAY • A NEW CHANCE','afternoon':'PICK YOUR CARD • PLAY NOW','evening':'TONIGHT COULD BE YOUR NIGHT'}[slot]
+    ft=f(25); bb=d.textbbox((0,0),slogan,font=ft)
+    d.text(((w-(bb[2]-bb[0]))//2,760),slogan,font=ft,fill=(255,245,210),stroke_width=2,stroke_fill=(25,8,40))
+    d.rounded_rectangle((115,1080,605,1170), radius=34, fill=gold, outline=(255,245,190), width=4)
+    cta='PLAY JANO BINGO'
+    ft=f(34); bb=d.textbbox((0,0),cta,font=ft)
+    d.text(((w-(bb[2]-bb[0]))//2,1098),cta,font=ft,fill=(35,12,48))
+    im.save(path,'JPEG',quality=92,optimize=True)
+  return True
+
+def daily_promo_loop():
+  if not bot:
+    print('Daily promo scheduler skipped: BOT_TOKEN is not configured.')
+    return
+  try:
+    ensure_daily_promo_images()
+  except Exception as e:
+    print('Daily promo image generation error:', type(e).__name__, e)
+  tz = ZoneInfo('Africa/Addis_Ababa')
+  while True:
+    try:
+      now = time.time()
+      local = __import__('datetime').datetime.fromtimestamp(now, tz)
+      for slot, cfg in DAILY_PROMO_SLOTS.items():
+        if local.hour != cfg['hour'] or local.minute != 0:
+          continue
+        date_key = local.strftime('%Y-%m-%d')
+        with PROMO_LOCK:
+          with get_db() as c:
+            already = c.execute('SELECT 1 FROM daily_promo_sends WHERE send_date=? AND slot=?', (date_key, slot)).fetchone()
+            uids = [] if already else [int(r[0]) for r in c.execute('SELECT uid FROM users').fetchall()]
+          if already:
+            continue
+          path = f'static/jano-bingo-{slot}.jpg'
+          if not os.path.exists(path):
+            ensure_daily_promo_images()
+          sent = 0
+          for uid in uids:
+            try:
+              with open(path, 'rb') as photo:
+                bot.send_photo(uid, photo, caption=cfg['caption'], reply_markup=play_kb('🎮 PLAY JANO BINGO'))
+              sent += 1
+            except Exception as e:
+              print(f'Daily promo failed for {uid}:', type(e).__name__)
+          with get_db() as c:
+            c.execute('INSERT INTO daily_promo_sends (send_date,slot,sent_at) VALUES (?,?,?) ON CONFLICT (send_date,slot) DO NOTHING',
+                      (date_key, slot, int(time.time())))
+          print(f'Daily promo {slot}: sent to {sent}/{len(uids)} users on {date_key}.')
+    except Exception as e:
+      print('Daily promo scheduler error:', type(e).__name__, e)
+    time.sleep(25)
+
 
 def menu_kb(uid=None):
   kb = IKB()
@@ -791,6 +904,7 @@ def on_startup():
   if refunded: print(f'Recovered interrupted game: refunded {refunded} card(s).')
   threading.Thread(target=game_loop, daemon=True).start()
   threading.Thread(target=run_bot, daemon=True).start()
+  threading.Thread(target=daily_promo_loop, daemon=True).start()
 
 @app.get('/health')
 def health(): return {'ok': True, 'time': int(time.time())}
