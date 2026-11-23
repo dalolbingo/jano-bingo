@@ -118,6 +118,7 @@ def init_db():
       name TEXT NOT NULL, grid TEXT NOT NULL,
       PRIMARY KEY (stake, card_no))""")
     c.execute('INSERT INTO house_stats (id,total_commission,total_rounds) VALUES (1,0,0) ON CONFLICT (id) DO NOTHING')
+    c.execute("CREATE TABLE IF NOT EXISTS bot_settings (setting_key TEXT PRIMARY KEY, image_data BYTEA, updated_at BIGINT)")
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_requests_reference ON requests(reference) WHERE reference IS NOT NULL AND reference <> ''")
 
 def recover_interrupted_games():
@@ -301,6 +302,14 @@ is_adm = lambda uid: ADMIN_ID != 0 and int(uid) == int(ADMIN_ID)
 def ensure_welcome_banner():
   os.makedirs('static', exist_ok=True)
   path = 'static/jano-bingo-welcome.jpg'
+  try:
+    with get_db() as c:
+      row = c.execute("SELECT image_data FROM bot_settings WHERE setting_key='welcome_image'").fetchone()
+    if row and row['image_data']:
+      with open(path, 'wb') as f: f.write(bytes(row['image_data']))
+      return path
+  except Exception as e:
+    print('Welcome image database read error:', type(e).__name__)
   w, h = 1280, 720
   im = Image.new('RGB', (w, h))
   px = im.load()
@@ -436,6 +445,29 @@ def addis_voice_sample():
 
 
 if bot:
+
+  @bot.message_handler(content_types=['photo'])
+  def c_set_welcome_photo(m):
+    if not is_adm(m.from_user.id):
+      return
+    try:
+      file_info = bot.get_file(m.photo[-1].file_id)
+      image_bytes = bot.download_file(file_info.file_path)
+      from PIL import Image
+      import io
+      with Image.open(io.BytesIO(image_bytes)) as img:
+        img = img.convert('RGB')
+        out = io.BytesIO()
+        img.save(out, format='JPEG', quality=92, optimize=True)
+        data = out.getvalue()
+      with get_db() as c:
+        c.execute("INSERT INTO bot_settings (setting_key,image_data,updated_at) VALUES ('welcome_image',?,?) ON CONFLICT (setting_key) DO UPDATE SET image_data=EXCLUDED.image_data, updated_at=EXCLUDED.updated_at", (data, int(time.time())))
+      with open('static/jano-bingo-welcome.jpg', 'wb') as f:
+        f.write(data)
+      bot.reply_to(m, '✅ Welcome image updated! It will now appear above the Jano Bingo menu whenever players open /start.')
+    except Exception as e:
+      print('Welcome image upload error:', type(e).__name__, str(e)[:250])
+      bot.reply_to(m, '❌ I could not save that image. Please send it again as a photo.')
 
   @bot.message_handler(commands=['voicesample'])
   def c_voice_sample(m):
