@@ -120,7 +120,7 @@ body.light .status-banner{color:#1d4ed8}
 .btnw{padding:12px;border-radius:12px;border:none;background:var(--ggrad);color:#090d16;font-size:13px;font-weight:800;cursor:pointer}
 .drw{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}.drw.on{display:block}
 .abox{background:var(--card2);border:1px solid var(--bdg);border-radius:12px;padding:12px;margin-bottom:10px}
-.pay-logos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px}.pay-logo-card{min-height:82px;padding:10px;border:2px solid transparent;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.16)}.pay-logo-card.cbe-card{background:#882b7a;overflow:hidden}.pay-logo-card.active{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.18)}.pay-logo-img{display:block;max-width:100%;height:54px;object-fit:contain}.pay-logo-img.tele-logo{width:58px;height:58px}.pay-logo-img.cbe-logo{width:126px;height:58px}.pay-details{display:none}.pay-details.on{display:block}
+.pay-logos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px}.pay-logo-card{min-height:82px;padding:10px;border:2px solid transparent;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.16)}.pay-logo-card.cbe-card{background:#882b7a;overflow:hidden}.pay-logo-card.active{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.18)}.pay-logo-img{display:block;max-width:100%;height:54px;object-fit:contain}.pay-logo-img.tele-logo{width:58px;height:58px}.pay-logo-img.cbe-logo{width:126px;height:58px}.pay-content{max-height:0;opacity:0;transform:translateY(-8px);overflow:hidden;pointer-events:none;transition:max-height .45s ease,opacity .3s ease,transform .3s ease}.pay-content.on{max-height:420px;opacity:1;transform:translateY(0);pointer-events:auto}
 .arow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13.5px}
 .cmini{padding:5px 10px;border-radius:7px;border:none;background:var(--ggrad);color:#090d16;font-size:11px;font-weight:800;cursor:pointer}
 .fstack{display:flex;flex-direction:column;gap:9px}
@@ -251,17 +251,19 @@ body.light .status-banner{color:#1d4ed8}
           <button type="button" class="pay-logo-card" id="depTeleLogo" onclick="showDepositAccount('TeleBirr')"><img class="pay-logo-img tele-logo" src="/static/telebirr-logo.svg" alt="Telebirr" /></button>
           <button type="button" class="pay-logo-card cbe-card" id="depCbeLogo" onclick="showDepositAccount('CBE Birr')"><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></button>
         </div>
-        <div id="depPayDetails" class="abox pay-details">
-          <div class="arow">
-            <strong><span id="depPayMethod">TeleBirr</span>: <span id="agPhone">0941882333</span></strong>
-            <button class="cmini" onclick="cpTxt(document.getElementById('agPhone').textContent,'ቁጥሩ ተቀድቷል!')">ቅዳ</button>
+        <div id="depPayContent" class="pay-content">
+          <div id="depPayDetails" class="abox">
+            <div class="arow">
+              <strong><span id="depPayMethod">TeleBirr</span>: <span id="agPhone">0941882333</span></strong>
+              <button class="cmini" onclick="cpTxt(document.getElementById('agPhone').textContent,'ቁጥሩ ተቀድቷል!')">ቅዳ</button>
+            </div>
+            <div style="font-size:12px;color:var(--mut)">ስም፦ <strong id="agName">SINSHAW JEMANEH ESHETE</strong></div>
           </div>
-          <div style="font-size:12px;color:var(--mut)">ስም፦ <strong id="agName">SINSHAW JEMANEH ESHETE</strong></div>
-        </div>
-        <div class="fstack">
-          <input id="depAmt" class="rinp" type="number" placeholder="የላኩት የብር መጠን (ዝቅተኛ 20 ETB)" />
-          <input id="depTx" class="rinp" type="text" placeholder="የSMS Transaction ID ያስገቡ" />
-          <button class="btnd" onclick="sendDep()">✔️ የገቢ ጥያቄ ለአድሚን ላክ</button>
+          <div class="fstack">
+            <input id="depAmt" class="rinp" type="number" placeholder="የላኩት የብር መጠን (ዝቅተኛ 20 ETB)" />
+            <input id="depTx" class="rinp" type="text" placeholder="የSMS Transaction ID ያስገቡ" />
+            <button class="btnd" onclick="sendDep()">✔️ የገቢ ጥያቄ ለአድሚን ላክ</button>
+          </div>
         </div>
       </div>
 
@@ -719,7 +721,7 @@ function goTab(t) {
   if (latestState) renderState(latestState);
 }
 function showDepositAccount(method) {
-  var details = document.getElementById('depPayDetails');
+  var details = document.getElementById('depPayContent');
   var tele = document.getElementById('depTeleLogo');
   var cbe = document.getElementById('depCbeLogo');
   document.getElementById('depPayMethod').textContent = method;
@@ -729,7 +731,7 @@ function showDepositAccount(method) {
 }
 function openDrw(w) {
   var d = document.getElementById('depDrw'), wd = document.getElementById('wdDrw');
-  if (w === 'dep') { d.classList.toggle('on'); wd.classList.remove('on'); if (!d.classList.contains('on')) { document.getElementById('depPayDetails').classList.remove('on'); document.getElementById('depTeleLogo').classList.remove('active'); document.getElementById('depCbeLogo').classList.remove('active'); } }
+  if (w === 'dep') { d.classList.toggle('on'); wd.classList.remove('on'); if (!d.classList.contains('on')) { document.getElementById('depPayContent').classList.remove('on'); document.getElementById('depTeleLogo').classList.remove('active'); document.getElementById('depCbeLogo').classList.remove('active'); } }
   else { wd.classList.toggle('on'); d.classList.remove('on'); }
 }
 function setThm(t) {
