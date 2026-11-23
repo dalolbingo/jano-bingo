@@ -120,7 +120,7 @@ body.light .status-banner{color:#1d4ed8}
 .btnw{padding:12px;border-radius:12px;border:none;background:var(--ggrad);color:#090d16;font-size:13px;font-weight:800;cursor:pointer}
 .drw{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}.drw.on{display:block}
 .abox{background:var(--card2);border:1px solid var(--bdg);border-radius:12px;padding:12px;margin-bottom:10px}
-.pay-logos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px}.pay-logo-card{min-height:82px;padding:10px;border:2px solid transparent;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.16)}.pay-logo-card.active{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.18)}.pay-logo-img{display:block;max-width:100%;height:54px;object-fit:contain}.pay-logo-img.tele-logo{width:58px;height:58px}.pay-logo-img.cbe-logo{width:126px;height:58px}.pay-details{display:none}.pay-details.on{display:block}
+.pay-logos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 12px}.pay-logo-card{min-height:82px;padding:10px;border:2px solid transparent;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.16)}.pay-logo-card.cbe-card{background:#882b7a;overflow:hidden}.pay-logo-card.active{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.18)}.pay-logo-img{display:block;max-width:100%;height:54px;object-fit:contain}.pay-logo-img.tele-logo{width:58px;height:58px}.pay-logo-img.cbe-logo{width:126px;height:58px}.pay-details{display:none}.pay-details.on{display:block}
 .arow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13.5px}
 .cmini{padding:5px 10px;border-radius:7px;border:none;background:var(--ggrad);color:#090d16;font-size:11px;font-weight:800;cursor:pointer}
 .fstack{display:flex;flex-direction:column;gap:9px}
@@ -249,7 +249,7 @@ body.light .status-banner{color:#1d4ed8}
         <div class="shd c-em">📲 የገቢ መመሪያ (TeleBirr / CBE Birr)</div>
         <div class="pay-logos">
           <button type="button" class="pay-logo-card" id="depTeleLogo" onclick="showDepositAccount('TeleBirr')"><img class="pay-logo-img tele-logo" src="/static/telebirr-logo.svg" alt="Telebirr" /></button>
-          <button type="button" class="pay-logo-card" id="depCbeLogo" onclick="showDepositAccount('CBE Birr')"><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></button>
+          <button type="button" class="pay-logo-card cbe-card" id="depCbeLogo" onclick="showDepositAccount('CBE Birr')"><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></button>
         </div>
         <div id="depPayDetails" class="abox pay-details">
           <div class="arow">
@@ -267,7 +267,7 @@ body.light .status-banner{color:#1d4ed8}
 
       <div id="wdDrw" class="drw">
         <div class="shd c-gold">💸 የወጪ ጥያቄ (Withdrawal)</div>
-        <div class="pay-logos"><div class="pay-logo-card"><img class="pay-logo-img tele-logo" src="/static/telebirr-logo.svg" alt="Telebirr" /></div><div class="pay-logo-card"><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></div></div>
+        <div class="pay-logos"><div class="pay-logo-card"><img class="pay-logo-img tele-logo" src="/static/telebirr-logo.svg" alt="Telebirr" /></div><div class="pay-logo-card cbe-card"><img class="pay-logo-img cbe-logo" src="/static/cbe-birr-logo.svg" alt="CBE Birr" /></div></div>
         <div class="fstack">
           <input id="wdAmt" class="rinp" type="number" placeholder="የሚወጣው መጠን (ዝቅተኛ 100 ETB)" />
           <input id="wdPh" class="rinp" type="tel" placeholder="የTeleBirr / CBE Birr ቁጥርዎ (09...)" />
