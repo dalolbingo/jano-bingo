@@ -571,11 +571,11 @@ function renderState(d) {
         lastWinnerCard = w.card_no;
         playVoice('bingo', 'Bingo!', 880);
       }
-      document.getElementById('wttl').textContent = w.is_bot ? 'ROUND ENDED' : '🏆 BINGO! 🏆';
-      document.getElementById('wName').textContent = w.is_bot ? 'Round completed' : '👑 ' + w.name + ' #' + w.card_no;
-      document.getElementById('wPrz').textContent = w.is_bot ? 'NO PAYOUT · NO REFUNDS' : w.prize + ' ETB';
-      document.getElementById('wLbl').textContent = w.is_bot ? 'ROUND RESULT' : w.name + ' (CARD #' + w.card_no + ')';
-      document.getElementById('wGrd').innerHTML = w.is_bot ? '' : w.grid.map(function(v, idx) {
+      document.getElementById('wttl').textContent = '🏆 BINGO! 🏆';
+      document.getElementById('wName').textContent = '👑 ' + w.name + ' #' + w.card_no;
+      document.getElementById('wPrz').textContent = w.is_bot ? 'BOT WINNER · NO PAYOUT' : w.prize + ' ETB';
+      document.getElementById('wLbl').textContent = w.name + ' (CARD #' + w.card_no + ')';
+      document.getElementById('wGrd').innerHTML = w.grid.map(function(v, idx) {
         var c = w.win_line.indexOf(idx) > -1 ? 'wl' : (v === 'FREE' || calMap[v]) ? 'cal' : '';
         return '<div class="wc ' + c + '">' + v + '</div>';
       }).join('');
