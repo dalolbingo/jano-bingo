@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <link rel="icon" type="image/svg+xml" href="/static/jano-bingo-icon.svg" />
 <link rel="apple-touch-icon" href="/static/jano-bingo-icon.svg" />
-<title>JANO BINGO LIVE</title>
+<title>Jano Bingo LIVE</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{
@@ -155,16 +155,16 @@ body.light .status-banner{color:#1d4ed8}
 <div id="toast" class="toast"></div>
 <div id="authGuard" class="auth-err" style="display:none">
   <div style="font-size:48px;margin-bottom:10px">👑</div>
-  <h2 style="color:var(--gold2);margin-bottom:8px">JANO BINGO LIVE</h2>
-  <p style="color:var(--mut);font-size:14px">ይህ ጨዋታ የሚሰራው በቴሌግራም ቦቱ ውስጥ ብቻ ነው። እባክዎ ወደ ቴሌግራም ተመልሰው <strong>Play JANO BINGO</strong> ቁልፍን ይጫኑ።</p>
+  <h2 style="color:var(--gold2);margin-bottom:8px">Jano Bingo LIVE</h2>
+  <p style="color:var(--mut);font-size:14px">ይህ ጨዋታ የሚሰራው በቴሌግራም ቦቱ ውስጥ ብቻ ነው። እባክዎ ወደ ቴሌግራም ተመልሰው <strong>Play Jano Bingo</strong> ቁልፍን ይጫኑ።</p>
 </div>
 
 <div id="appRoot" class="app">
   <header class="hdr">
     <div class="brand">
-      <img class="badge" src="/static/jano-bingo-icon.svg" alt="JANO BINGO" />
+      <img class="badge" src="/static/jano-bingo-icon.svg" alt="Jano Bingo" />
       <div>
-        <div class="btitle">JANO BINGO</div>
+        <div class="btitle">Jano Bingo</div>
       </div>
     </div>
     <div class="hact">
@@ -314,7 +314,7 @@ body.light .status-banner{color:#1d4ed8}
   </section>
 
   <nav class="bnav">
-    <button class="nbtn on" data-t="bingo" onclick="goTab('bingo')"><span class="ni">🎮</span><span>BINGO</span></button>
+    <button class="nbtn on" data-t="bingo" onclick="goTab('bingo')"><span class="ni">🎮</span><span>Bingo</span></button>
     <button class="nbtn" data-t="wallet" onclick="goTab('wallet')"><span class="ni">👛</span><span>WALLET</span></button>
     <button class="nbtn" data-t="history" onclick="goTab('history')"><span class="ni">🕒</span><span>HISTORY</span></button>
     <button class="nbtn" data-t="rank" onclick="goTab('rank')"><span class="ni">🏆</span><span>RANK</span></button>
@@ -324,7 +324,7 @@ body.light .status-banner{color:#1d4ed8}
 
 <div id="winOv" class="wov">
   <div class="wcard">
-    <div id="wttl" class="wttl">🏆 BINGO! 🏆</div>
+    <div id="wttl" class="wttl">🏆 Bingo! 🏆</div>
     <div id="wName" class="wnm">👑 Winner</div>
     <div id="wPrz" class="wprz">0 ETB</div>
     <div class="wbox">
@@ -583,7 +583,7 @@ function renderState(d) {
         lastWinnerCard = w.card_no;
         playVoice('bingo', 'Bingo!', 880);
       }
-      document.getElementById('wttl').textContent = '🏆 BINGO! 🏆';
+      document.getElementById('wttl').textContent = '🏆 Bingo! 🏆';
       document.getElementById('wName').textContent = '👑 ' + w.name + ' #' + w.card_no;
       document.getElementById('wPrz').textContent = w.prize.toFixed(2) + ' ETB';
       document.getElementById('wLbl').textContent = w.name + ' (CARD #' + w.card_no + ')';
