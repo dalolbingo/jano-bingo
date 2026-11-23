@@ -401,7 +401,7 @@ if bot:
 
   @bot.message_handler(commands=['menu'])
   def c_menu(m):
-    bot.send_message(m.chat.id, f'👋 ሰላም {m.from_user.first_name or "Player"}!\\n\\n🎉 Welcome to JANO BINGO!\\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id), disable_web_page_preview=True)
+    bot.send_message(m.chat.id, f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to JANO BINGO!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id), disable_web_page_preview=True)
 
   @bot.message_handler(commands=['start'])
   def c_start(m):
@@ -411,7 +411,7 @@ if bot:
     if not u['phone']:
       kb = RKB(resize_keyboard=True, one_time_keyboard=True); kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
       return bot.send_message(m.chat.id, '👑 እንኳን ወደ JANO BINGO በደህና መጡ!\n\nለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
-    bot.send_message(m.chat.id, f'👋 ሰላም {m.from_user.first_name or "Player"}!\\n\\n🎉 Welcome to JANO BINGO!\\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id), disable_web_page_preview=True)
+    bot.send_message(m.chat.id, f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to JANO BINGO!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id), disable_web_page_preview=True)
 
   @bot.message_handler(content_types=['contact'])
   def c_contact(m):
@@ -617,7 +617,7 @@ if bot:
       bot.send_message(call.message.chat.id, f'💰 ጠቅላላ ባላንስ: {u["play_wallet"]:.2f} ETB')
     elif call.data == 'home_invite':
       me = bot.get_me()
-      bot.send_message(call.message.chat.id, f'🎁 ለእያንዳንዱ ስኬታማ ግብዣ 15 ETB ይሸለሙ!\\n🔗 https://t.me/{me.username}?start={uid}')
+      bot.send_message(call.message.chat.id, f'🎁 ለእያንዳንዱ ስኬታማ ግብዣ 15 ETB ይሸለሙ!\n🔗 https://t.me/{me.username}?start={uid}')
     elif call.data == 'home_register':
       kb = RKB(resize_keyboard=True, one_time_keyboard=True)
       kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
