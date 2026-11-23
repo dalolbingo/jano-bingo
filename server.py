@@ -198,7 +198,7 @@ def finish_round(r, uid, name, cno, wl):
   comm = round(paid_cards(r) * r['stake'] - prize, 2)
   with get_db() as c:
     c.execute('UPDATE users SET play_wallet=play_wallet+?, wins=wins+1, total_won=total_won+? WHERE uid=?', (prize, prize, uid))
-    add_tx(c, uid, '🏆', f'BINGO አሸነፉ! (Card #{cno})', prize)
+    add_tx(c, uid, '🏆', f'Bingo አሸነፉ! (Card #{cno})', prize)
     c.execute('UPDATE house_stats SET total_commission=total_commission+?, total_rounds=total_rounds+1 WHERE id=1', (comm,))
     # Remove all cards in this completed round in the same transaction as payout.
     c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
@@ -316,15 +316,15 @@ def ensure_welcome_banner():
   def font(size):
     try: return ImageFont.truetype(font_path, size)
     except Exception: return ImageFont.load_default()
-  # Crown above the JANO wordmark
+  # Crown above the Jano wordmark
   cx = w//2
   d.polygon([(cx-120,155),(cx-88,78),(cx-38,122),(cx,48),(cx+38,122),(cx+88,78),(cx+120,155)], fill=(255,190,30), outline=(255,235,130))
   d.rounded_rectangle((cx-124,145,cx+124,174), radius=10, fill=(255,190,30), outline=(255,235,130), width=5)
   def centered(txt, y, f, color, stroke=(20,0,35), sw=9):
     b=d.textbbox((0,0),txt,font=f,stroke_width=sw)
     d.text(((w-(b[2]-b[0]))//2,y),txt,font=f,fill=color,stroke_width=sw,stroke_fill=stroke)
-  centered('JANO',170,font(142),(255,207,48))
-  centered('BINGO',320,font(126),(220,62,255))
+  centered('Jano',170,font(142),(255,207,48))
+  centered('Bingo',320,font(126),(220,62,255))
   for x,y,n,c in [(115,300,'7',(40,125,255)),(845,300,'5',(240,65,80)),(155,465,'12',(40,200,110)),(805,465,'36',(155,80,255))]:
     d.ellipse((x-52,y-52,x+52,y+52),fill=c,outline='white',width=7)
     f=font(42); b=d.textbbox((0,0),n,font=f)
@@ -335,7 +335,7 @@ def ensure_welcome_banner():
 
 def menu_kb(uid=None):
   kb = IKB()
-  kb.row(IBtn('🎮 Play JANO BINGO', web_app=WebAppInfo(url=APP_URL)))
+  kb.row(IBtn('🎮 Play Jano Bingo', web_app=WebAppInfo(url=APP_URL)))
   kb.row(IBtn('💰 Deposit', callback_data='home_deposit'), IBtn('💸 Withdraw', callback_data='home_withdraw'))
   kb.row(IBtn('💳 Balance', callback_data='home_balance'), IBtn('👥 Invite Friends', callback_data='home_invite'))
   kb.row(IBtn('🎯 Game Patterns', web_app=WebAppInfo(url=APP_URL)), IBtn('📖 Instructions', callback_data='home_rules'))
@@ -344,7 +344,7 @@ def menu_kb(uid=None):
     kb.row(IBtn('👑 Admin Panel', callback_data='home_admin'))
   return kb
 
-def play_kb(lbl='🎲 Play JANO BINGO'):
+def play_kb(lbl='🎲 Play Jano Bingo'):
   kb = IKB(); kb.add(IBtn(lbl, web_app=WebAppInfo(url=APP_URL))); return kb
 
 def adm_kb():
@@ -399,7 +399,7 @@ def addis_voice_sample():
   audio_url = data.get('audio_url')
   if not audio_url:
     raise RuntimeError('Addis AI did not return an audio URL.')
-  req = urllib.request.Request(audio_url, headers={'User-Agent': 'JANO-BINGO/1.0'})
+  req = urllib.request.Request(audio_url, headers={'User-Agent': 'Jano-Bingo/1.0'})
   with urllib.request.urlopen(req, timeout=45) as response:
     audio = io.BytesIO(response.read())
   audio.name = 'jano-bingo-amharic-male-sample.mp3'
@@ -418,7 +418,7 @@ if bot:
     status = bot.reply_to(m, '🎙️ የአማርኛ የወንድ ድምፅ ናሙና እየተዘጋጀ ነው...')
     try:
       audio, cost, clip_id = addis_voice_sample()
-      bot.send_audio(m.chat.id, audio, caption='🎙️ JANO BINGO — Yohannes የአማርኛ ድምፅ ናሙና')
+      bot.send_audio(m.chat.id, audio, caption='🎙️ Jano Bingo — Yohannes የአማርኛ ድምፅ ናሙና')
       note = '✅ ናሙናው ተልኳል። ድምፁን ያዳምጡና ይወስኑ።'
       if cost is not None: note += f'\nየተገመተ ወጪ: {cost} ETB'
       bot.send_message(m.chat.id, note)
@@ -433,12 +433,12 @@ if bot:
   @bot.message_handler(func=lambda m: m.text == '👑 Admin Panel')
   def c_admin(m):
     if not is_adm(m.from_user.id): return bot.reply_to(m, '⛔ ለአድሚን ብቻ!')
-    bot.send_message(m.chat.id, '👑 JANO BINGO — የአድሚን መቆጣጠሪያ', reply_markup=adm_kb())
+    bot.send_message(m.chat.id, '👑 Jano Bingo — የአድሚን መቆጣጠሪያ', reply_markup=adm_kb())
 
   @bot.message_handler(commands=['menu'])
   def c_menu(m):
     with open(ensure_welcome_banner(), 'rb') as photo:
-      bot.send_photo(m.chat.id, photo, caption=f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to JANO BINGO!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
+      bot.send_photo(m.chat.id, photo, caption=f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to Jano Bingo!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
 
   @bot.message_handler(commands=['start'])
   def c_start(m):
@@ -447,9 +447,9 @@ if bot:
     u = ensure_user(m.from_user.id, m.from_user.first_name or 'Player', ref)
     if not u['phone']:
       kb = RKB(resize_keyboard=True, one_time_keyboard=True); kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
-      return bot.send_message(m.chat.id, '👑 እንኳን ወደ JANO BINGO በደህና መጡ!\n\nለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
+      return bot.send_message(m.chat.id, '👑 እንኳን ወደ Jano Bingo በደህና መጡ!\n\nለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
     with open(ensure_welcome_banner(), 'rb') as photo:
-      bot.send_photo(m.chat.id, photo, caption=f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to JANO BINGO!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
+      bot.send_photo(m.chat.id, photo, caption=f'👋 ሰላም {m.from_user.first_name or "Player"}!\n\n🎉 Welcome to Jano Bingo!\nYour exciting bingo game starts here. Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
 
   @bot.message_handler(content_types=['contact'])
   def c_contact(m):
@@ -457,11 +457,11 @@ if bot:
     with get_db() as c: c.execute('UPDATE users SET phone=? WHERE uid=?', (m.contact.phone_number, m.from_user.id))
     bot.send_message(m.chat.id, f'✅ ተመዝግበዋል! ({m.contact.phone_number})', reply_markup=ReplyKeyboardRemove())
     with open(ensure_welcome_banner(), 'rb') as photo:
-      bot.send_photo(m.chat.id, photo, caption='👋 Welcome to JANO BINGO! Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
+      bot.send_photo(m.chat.id, photo, caption='👋 Welcome to Jano Bingo! Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
 
   @bot.message_handler(commands=['play'])
-  @bot.message_handler(func=lambda m: m.text == '🎮 Play JANO BINGO')
-  def c_play(m): bot.send_message(m.chat.id, 'Good luck JANO BINGO 🍀', reply_markup=play_kb('🎲 Play JANO BINGO'))
+  @bot.message_handler(func=lambda m: m.text == '🎮 Play Jano Bingo')
+  def c_play(m): bot.send_message(m.chat.id, 'Good luck Jano Bingo 🍀', reply_markup=play_kb('🎲 Play Jano Bingo'))
 
   @bot.message_handler(commands=['balance'])
   @bot.message_handler(func=lambda m: m.text == '💳 ባላንስ (Balance)')
@@ -641,7 +641,7 @@ if bot:
   def c_sup(m):
     support_url = f"https://t.me/{SUPPORT.lstrip('@')}"
     kb = IKB(); kb.add(IBtn('💬 የድጋፍ ቡድንን ያነጋግሩ / Contact Support', url=support_url))
-    bot.send_message(m.chat.id, f'🎧 የJANO BINGO ድጋፍ\n\nለእርዳታ ከዚህ ይጻፉ፦ {SUPPORT}\n\nContact our support account:', reply_markup=kb, disable_web_page_preview=True)
+    bot.send_message(m.chat.id, f'🎧 የJano Bingo ድጋፍ\n\nለእርዳታ ከዚህ ይጻፉ፦ {SUPPORT}\n\nContact our support account:', reply_markup=kb, disable_web_page_preview=True)
 
   @bot.callback_query_handler(func=lambda c: c.data and c.data.startswith('home_'))
   def cb_home_menu(call):
@@ -664,7 +664,7 @@ if bot:
     elif call.data == 'home_rules':
       c_rules(call.message)
     elif call.data == 'home_admin':
-      if is_adm(uid): bot.send_message(call.message.chat.id, '👑 JANO BINGO — የአድሚን መቆጣጠሪያ', reply_markup=adm_kb())
+      if is_adm(uid): bot.send_message(call.message.chat.id, '👑 Jano Bingo — የአድሚን መቆጣጠሪያ', reply_markup=adm_kb())
 
   @bot.message_handler(commands=['rules'])
   @bot.message_handler(func=lambda m: m.text == '📜 ህግና መመሪያ')
@@ -675,9 +675,9 @@ def run_bot():
   try:
     # Telegram's native Menu button will show these slash commands.
     public_commands = [
-      BotCommand('start', 'Start JANO BINGO'),
+      BotCommand('start', 'Start Jano Bingo'),
       BotCommand('menu', 'Open the main menu'),
-      BotCommand('play', 'Play JANO BINGO'),
+      BotCommand('play', 'Play Jano Bingo'),
       BotCommand('balance', 'Check your balance'),
       BotCommand('deposit', 'Deposit funds'),
       BotCommand('withdraw', 'Withdraw funds'),
@@ -696,7 +696,7 @@ def run_bot():
     try: bot.infinity_polling(timeout=20, long_polling_timeout=15)
     except Exception as e: print('Bot error:', e); time.sleep(5)
 
-app = FastAPI(title='JANO BINGO Live')
+app = FastAPI(title='Jano Bingo Live')
 allowed_origins = [x.strip().rstrip('/') for x in os.environ.get('CORS_ORIGINS', APP_URL).split(',') if x.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_methods=['GET', 'POST'], allow_headers=['Content-Type', 'X-Tg-Init-Data'])
 if os.path.isdir('sounds'): app.mount('/sounds', StaticFiles(directory='sounds'), name='sounds')
@@ -787,7 +787,7 @@ async def api_claim(req: Request, x_tg_init_data: str = Header(default='')):
     own = r['cards'].get(cno)
     if not own or own['uid'] != u['uid']: raise HTTPException(403, 'ይህ ካርድ የእርስዎ አይደለም!')
     wl = check_win(own['grid'], set(r['called']))
-    if not wl: raise HTTPException(400, 'ገና BINGO አልተሟላም!')
+    if not wl: raise HTTPException(400, 'ገና Bingo አልተሟላም!')
     finish_round(r, u['uid'], u['name'], cno, wl)
     return {'ok': True, 'prize': r['winner']['prize']}
 
