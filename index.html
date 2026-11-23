@@ -120,6 +120,7 @@ body.light .status-banner{color:#1d4ed8}
 .btnw{padding:12px;border-radius:12px;border:none;background:var(--ggrad);color:#090d16;font-size:13px;font-weight:800;cursor:pointer}
 .drw{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}.drw.on{display:block}
 .abox{background:var(--card2);border:1px solid var(--bdg);border-radius:12px;padding:12px;margin-bottom:10px}
+.pay-logos{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 0 12px}.pay-logo{min-height:62px;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 7px;border-radius:12px;background:var(--card2);border:1px solid var(--bd);font-size:12px;font-weight:900;letter-spacing:.1px}.pay-mark{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:1000;flex:0 0 30px}.pay-logo.tele{color:#1673b8}.pay-logo.tele .pay-mark{color:#fff;background:linear-gradient(135deg,#f59e0b 0 48%,#1686c9 49% 100%)}.pay-logo.cbe{color:#b34aa8}.pay-logo.cbe .pay-mark{color:#24113d;background:linear-gradient(135deg,#f8d84a,#fff0a6)}body.light .pay-logo.tele{color:#075985}body.light .pay-logo.cbe{color:#86198f}
 .arow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13.5px}
 .cmini{padding:5px 10px;border-radius:7px;border:none;background:var(--ggrad);color:#090d16;font-size:11px;font-weight:800;cursor:pointer}
 .fstack{display:flex;flex-direction:column;gap:9px}
@@ -246,6 +247,7 @@ body.light .status-banner{color:#1d4ed8}
 
       <div id="depDrw" class="drw">
         <div class="shd c-em">📲 የገቢ መመሪያ (TeleBirr / CBE)</div>
+        <div class="pay-logos"><div class="pay-logo tele"><span class="pay-mark">t</span><span>telebirr</span></div><div class="pay-logo cbe"><span class="pay-mark">CBE</span><span>CBE Birr</span></div></div>
         <div class="abox">
           <div class="arow">
             <strong>TeleBirr: <span id="agPhone">0941882333</span></strong>
@@ -262,6 +264,7 @@ body.light .status-banner{color:#1d4ed8}
 
       <div id="wdDrw" class="drw">
         <div class="shd c-gold">💸 የወጪ ጥያቄ (Withdrawal)</div>
+        <div class="pay-logos"><div class="pay-logo tele"><span class="pay-mark">t</span><span>telebirr</span></div><div class="pay-logo cbe"><span class="pay-mark">CBE</span><span>CBE Birr</span></div></div>
         <div class="fstack">
           <input id="wdAmt" class="rinp" type="number" placeholder="የሚወጣው መጠን (ዝቅተኛ 100 ETB)" />
           <input id="wdPh" class="rinp" type="tel" placeholder="የTeleBirr / CBE ቁጥርዎ (09...)" />
