@@ -11,8 +11,8 @@
 <path d="M134 235H378" stroke="#ffda54" stroke-width="12" stroke-linecap="round"/>
 <circle cx="156" cy="203" r="12" fill="#38bdf8"/><circle cx="256" cy="183" r="14" fill="#ef4444"/><circle cx="356" cy="203" r="12" fill="#38bdf8"/>
 <rect x="105" y="245" width="302" height="64" rx="18" fill="#121b54" stroke="#58b8ff" stroke-width="7"/>
-<text x="256" y="289" text-anchor="middle" font-family="Arial,sans-serif" font-size="47" font-weight="900" letter-spacing="8" fill="url(#white)">JANO</text>
-<text x="256" y="382" text-anchor="middle" font-family="Arial,sans-serif" font-size="83" font-weight="900" letter-spacing="2" fill="url(#gold)" stroke="#542200" stroke-width="5" paint-order="stroke">BINGO</text>
+<text x="256" y="289" text-anchor="middle" font-family="Arial,sans-serif" font-size="47" font-weight="900" letter-spacing="8" fill="url(#white)">Jano</text>
+<text x="256" y="382" text-anchor="middle" font-family="Arial,sans-serif" font-size="83" font-weight="900" letter-spacing="2" fill="url(#gold)" stroke="#542200" stroke-width="5" paint-order="stroke">Bingo</text>
 <g stroke="#fff" stroke-width="5">
  <circle cx="75" cy="331" r="37" fill="#2563eb"/><circle cx="437" cy="331" r="37" fill="#dc2626"/>
  <circle cx="75" cy="331" r="24" fill="#eff6ff" stroke="none"/><circle cx="437" cy="331" r="24" fill="#fff1f2" stroke="none"/>
