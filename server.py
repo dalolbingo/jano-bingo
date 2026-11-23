@@ -107,6 +107,11 @@ def init_db():
       id INTEGER PRIMARY KEY CHECK (id=1),
       total_commission DOUBLE PRECISION DEFAULT 0,
       total_rounds INTEGER DEFAULT 0)""")
+    # Bot leaderboard is separate from user wallets: virtual winnings affect rank only.
+    c.execute("""CREATE TABLE IF NOT EXISTS bot_rankings (
+      name TEXT PRIMARY KEY,
+      wins INTEGER DEFAULT 0,
+      total_won DOUBLE PRECISION DEFAULT 0)""")
     c.execute("""CREATE TABLE IF NOT EXISTS room_cards (
       stake INTEGER NOT NULL, card_no INTEGER NOT NULL, uid BIGINT NOT NULL,
       name TEXT NOT NULL, grid TEXT NOT NULL,
@@ -177,14 +182,16 @@ def finish_round(r, uid, name, cno, wl):
   prize = derash(r)
   is_bot = uid < 0
   if is_bot:
-    # Bot reservations contribute to the same 20% commission and 80% derash calculation.
-    # The derash is not paid when a bot wins, but the round still ends without refunds.
+    # Bots receive the same virtual derash for ranking, but never a wallet credit or payout.
     comm = round(paid_cards(r) * r['stake'] - prize, 2)
     with get_db() as c:
+      c.execute('''INSERT INTO bot_rankings (name,wins,total_won) VALUES (?,1,?)
+                   ON CONFLICT (name) DO UPDATE SET wins=bot_rankings.wins+1,
+                   total_won=bot_rankings.total_won+EXCLUDED.total_won''', (name, prize))
       c.execute('UPDATE house_stats SET total_commission=total_commission+?, total_rounds=total_rounds+1 WHERE id=1', (comm,))
       c.execute('DELETE FROM room_cards WHERE stake=?', (r['stake'],))
     r['phase'], r['win_until'] = 'WINNER', time.time() + WIN_SEC
-    r['winner'] = {'uid': uid, 'name': name, 'card_no': cno, 'prize': 0.0, 'grid': r['cards'][cno]['grid'], 'win_line': wl, 'is_bot': True}
+    r['winner'] = {'uid': uid, 'name': name, 'card_no': cno, 'prize': prize, 'grid': r['cards'][cno]['grid'], 'win_line': wl, 'is_bot': True}
     return
   comm = round(paid_cards(r) * r['stake'] - prize, 2)
   with get_db() as c:
@@ -219,7 +226,7 @@ def game_loop():
             i = r['bot_index']
             cno = random.SystemRandom().choice(available)
             name = r['bot_queue'][i]['name']
-            r['cards'][cno] = {'uid': -(i + 1), 'name': name + ' (BOT)', 'grid': gen_card(cno), 'is_bot': True}
+            r['cards'][cno] = {'uid': -(i + 1), 'name': name, 'grid': gen_card(cno), 'is_bot': True}
             r['bot_index'] += 1
         pc = n_players(r)
         # The first reserved card (bot or real player) starts the 60-second countdown.
@@ -577,7 +584,11 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
             'winner_left': max(0, int(r['win_until'] - time.time())) if r['phase'] == 'WINNER' else 0}
   with get_db() as c:
     txs = [dict(x) for x in c.execute('SELECT icon,title,amount,created_at FROM transactions WHERE uid=? ORDER BY id DESC LIMIT 25', (u['uid'],)).fetchall()]
-    top = [dict(x) for x in c.execute('SELECT name,total_won FROM users WHERE total_won>0 ORDER BY total_won DESC LIMIT 10').fetchall()]
+    top = [dict(x) for x in c.execute("""SELECT name,total_won FROM (
+      SELECT name,total_won FROM users WHERE total_won>0
+      UNION ALL
+      SELECT name,total_won FROM bot_rankings WHERE total_won>0
+    ) winners ORDER BY total_won DESC LIMIT 10""").fetchall()]
   return {'user': {'uid': u['uid'], 'name': u['name'], 'play_wallet': round(u['play_wallet'],2), 'matches_played': u['matches_played'], 'wins': u['wins']},
           'config': {'telebirr_name': TB_NAME, 'telebirr_phone': TB_PHONE, 'support': SUPPORT}, 'room': snap, 'history': txs, 'rank': top}
 
