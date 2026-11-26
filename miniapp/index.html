@@ -241,7 +241,7 @@ body.light .status-banner{color:#1d4ed8}
       <div class="wact">
         <button class="btnd" onclick="openDrw('dep')">↓ ገቢ (DEPOSIT)</button>
         <button class="btnw" onclick="openDrw('wd')">↑ ወጪ (WITHDRAW)</button>
-        <button class="btnp" onclick="document.getElementById('transferDrw').classList.toggle('on')">↔️ TRANSFER</button>
+        <button class="btnp" onclick="openTransfer()">↔️ TRANSFER</button>
       </div>
       <div id="transferDrw" class="drw">
         <div class="shd c-gold">↔️ ከተጫዋች ወደ ተጫዋች (FREE TRANSFER)</div>
@@ -772,10 +772,44 @@ function showWithdrawMethod(method) {
   tele.classList.toggle('active', method === 'TeleBirr');
   cbe.classList.toggle('active', method === 'CBE Birr');
 }
+function closeTransfer() {
+  document.getElementById('transferDrw').classList.remove('on');
+}
+function openTransfer() {
+  var transfer = document.getElementById('transferDrw');
+  var opening = !transfer.classList.contains('on');
+  document.getElementById('depDrw').classList.remove('on');
+  document.getElementById('wdDrw').classList.remove('on');
+  depPayReset();
+  wdPayReset();
+  transfer.classList.toggle('on', opening);
+}
+function depPayReset() {
+  document.getElementById('depPayContent').classList.remove('on','switching');
+  document.getElementById('depTeleLogo').classList.remove('active');
+  document.getElementById('depCbeLogo').classList.remove('active');
+}
+function wdPayReset() {
+  document.getElementById('wdPayContent').classList.remove('on','switching');
+  document.getElementById('wdTeleLogo').classList.remove('active');
+  document.getElementById('wdCbeLogo').classList.remove('active');
+}
 function openDrw(w) {
   var d = document.getElementById('depDrw'), wd = document.getElementById('wdDrw');
-  if (w === 'dep') { d.classList.toggle('on'); wd.classList.remove('on'); if (!d.classList.contains('on')) { document.getElementById('depPayContent').classList.remove('on'); document.getElementById('depTeleLogo').classList.remove('active'); document.getElementById('depCbeLogo').classList.remove('active'); } }
-  else { wd.classList.toggle('on'); d.classList.remove('on'); if (!wd.classList.contains('on')) { document.getElementById('wdPayContent').classList.remove('on','switching'); document.getElementById('wdTeleLogo').classList.remove('active'); document.getElementById('wdCbeLogo').classList.remove('active'); } }
+  closeTransfer();
+  if (w === 'dep') {
+    var openingDep = !d.classList.contains('on');
+    wd.classList.remove('on');
+    wdPayReset();
+    d.classList.toggle('on', openingDep);
+    if (!openingDep) depPayReset();
+  } else {
+    var openingWd = !wd.classList.contains('on');
+    d.classList.remove('on');
+    depPayReset();
+    wd.classList.toggle('on', openingWd);
+    if (!openingWd) wdPayReset();
+  }
 }
 function setThm(t) {
   document.body.classList.toggle('light', t === 'light');
