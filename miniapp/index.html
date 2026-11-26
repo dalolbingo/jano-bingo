@@ -47,7 +47,6 @@ body.light .wchip{color:#b45309}
 .c-em{color:var(--em)}.c-blue{color:#60a5fa}.c-red{color:#f87171}
 .status-banner{background:rgba(37,99,235,.14);border:1px solid rgba(59,130,246,.35);border-radius:12px;padding:9px 12px;margin-bottom:10px;text-align:center;font-size:12px;font-weight:700;color:#93c5fd}
 .status-banner.counting{background:rgba(245,158,11,.16);border-color:var(--bdg);color:var(--gold2)}
-.demo-info{background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.35);border-radius:10px;padding:8px 10px;margin:-2px 0 10px;color:#34d399;font-size:10.5px;line-height:1.5;display:none;}
 body.light .status-banner{color:#1d4ed8}
 .sbar{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:6px 8px}
 .spills{display:flex;gap:5px}
@@ -184,7 +183,6 @@ body.light .status-banner{color:#1d4ed8}
       </div>
 
       <div id="statusBanner" class="status-banner">⏳ እውነተኛ ተጫዋቾች በመጠበቅ ላይ... (ቢያንስ 2 ሰው ሲገባ ይጀምራል)</div>
-      <div id="demoInfo" class="demo-info" style="display:block">🤖 15 Ethiopian-named bots play in every room. Bot wins end the round with no payout or refunds.</div>
 
       <div class="sbar">
         <div class="spills">
@@ -216,7 +214,6 @@ body.light .status-banner{color:#1d4ed8}
         <div class="sbox"><div class="slbl">PLAYERS</div><div id="pPly" class="sval c-blue">0</div></div>
         <div class="sbox"><div class="slbl">CALLS</div><div id="pCal" class="sval">0</div></div>
       </div>
-      <div id="demoPlayInfo" class="demo-info"></div>
       <div class="playlay">
         <div class="mstr">
           <div class="bhdr"><div class="ch cB">B</div><div class="ch cI">I</div><div class="ch cN">N</div><div class="ch cG">G</div><div class="ch cO">O</div></div>
@@ -465,11 +462,6 @@ function checkWinLocal(grid, markMap) {
 function renderState(d) {
   latestState = d;
   var u = d.user, r = d.room, cfg = d.config;
-  ['demoInfo','demoPlayInfo'].forEach(function(id) {
-    var el = document.getElementById(id);
-    el.textContent = '';
-    el.style.display = 'none';
-  });
   document.getElementById('hBal').textContent = u.play_wallet.toFixed(2);
   document.getElementById('lWal').textContent = u.play_wallet.toFixed(2);
   document.getElementById('walletVal').textContent = u.play_wallet.toFixed(2) + ' ETB';
