@@ -631,9 +631,25 @@ if bot:
 
   @bot.message_handler(content_types=['contact'])
   def c_contact(m):
+    # Only accept the Telegram user's own shared contact, and award the signup
+    # bonus once when their phone number is first registered.
+    if not m.contact or (m.contact.user_id and int(m.contact.user_id) != int(m.from_user.id)):
+      return bot.reply_to(m, '❌ እባክዎ የራስዎን ስልክ ቁጥር ብቻ ያጋሩ።')
     ensure_user(m.from_user.id, m.from_user.first_name or 'Player')
-    with get_db() as c: c.execute('UPDATE users SET phone=? WHERE uid=?', (m.contact.phone_number, m.from_user.id))
-    bot.send_message(m.chat.id, f'✅ ተመዝግበዋል! ({m.contact.phone_number})', reply_markup=ReplyKeyboardRemove())
+    phone = (m.contact.phone_number or '').strip()
+    if not phone:
+      return bot.reply_to(m, '❌ ትክክለኛ ስልክ ቁጥር አልተገኘም። እንደገና ይሞክሩ።')
+    awarded = False
+    with get_db() as c:
+      row = c.execute('SELECT phone FROM users WHERE uid=? FOR UPDATE', (m.from_user.id,)).fetchone()
+      if row and not row['phone']:
+        c.execute('UPDATE users SET phone=?,play_wallet=play_wallet+10 WHERE uid=?', (phone, m.from_user.id))
+        add_tx(c, m.from_user.id, '🎁', 'የአዲስ ምዝገባ ቦነስ', 10.0)
+        awarded = True
+    if awarded:
+      bot.send_message(m.chat.id, f'✅ በተሳካ ሁኔታ ተመዝግበዋል! ({phone})\n\n🎁 የምዝገባ ቦነስ: +10 ETB\n💰 10 ብር ወደ ባላንስዎ ተጨምሯል።', reply_markup=ReplyKeyboardRemove())
+    else:
+      bot.send_message(m.chat.id, f'✅ አስቀድመው ተመዝግበዋል! ({phone})\n🎁 የ10 ETB የምዝገባ ቦነስ አንድ ጊዜ ብቻ ይሰጣል።', reply_markup=ReplyKeyboardRemove())
     with open(ensure_welcome_banner(), 'rb') as photo:
       bot.send_photo(m.chat.id, photo, caption='👋 Welcome to Jano Bingo! Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
 
