@@ -519,7 +519,7 @@ def notify_req(rtype, uid, amt, md, det, reference=None):
   else:
     hdr = '🔔 አዲስ የወጪ (WITHDRAW) ጥያቄ!'
     kb.row(IBtn('✅ ተልኳል', callback_data=f'ap_wd_{rid}'), IBtn('❌ ሰርዝና መልስ', callback_data=f'rj_wd_{rid}'))
-  try: bot.send_message(ADMIN_ID, f'{hdr}\n\n🆔 #{rid}\n👤 {u["name"]} (ID: {uid})\n📞 {u["phone"] or "-"}\n💵 {float(amt):.2f} ETB\n🏦 {md}\n📝 {det}', reply_markup=kb)
+  try: bot.send_message(ADMIN_ID, f'{hdr}\n\n🆔 #{rid}\n👤 {u["name"]}\n📱 Player ID: {u["phone"] or "Not registered"}\n💵 {float(amt):.2f} ETB\n🏦 {md}\n📝 {det}', reply_markup=kb)
   except Exception: pass
   return rid
 
@@ -1002,7 +1002,7 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
       UNION ALL
       SELECT name,total_won FROM bot_rankings WHERE total_won>0
     ) winners ORDER BY total_won DESC LIMIT 10""").fetchall()]
-  return {'user': {'uid': u['uid'], 'name': u['name'], 'play_wallet': round(u['play_wallet'],2), 'matches_played': u['matches_played'], 'wins': u['wins']},
+  return {'user': {'phone': u.get('phone') or 'Not registered', 'name': u['name'], 'play_wallet': round(u['play_wallet'],2), 'matches_played': u['matches_played'], 'wins': u['wins']},
           'config': {'telebirr_name': TB_NAME, 'telebirr_phone': TB_PHONE, 'support': SUPPORT}, 'room': snap, 'history': txs, 'rank': top}
 
 @app.post('/api/buy_card')
