@@ -904,7 +904,7 @@ def on_startup():
   if refunded: print(f'Recovered interrupted game: refunded {refunded} card(s).')
   threading.Thread(target=game_loop, daemon=True).start()
   threading.Thread(target=run_bot, daemon=True).start()
-  threading.Thread(target=daily_promo_loop, daemon=True).start()
+  # Daily promotional broadcasts are disabled; do not start daily_promo_loop().
 
 @app.get('/health')
 def health(): return {'ok': True, 'time': int(time.time())}
