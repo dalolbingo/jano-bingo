@@ -464,7 +464,7 @@ function checkWinLocal(grid, markMap) {
 function renderState(d) {
   latestState = d;
   var u = d.user, r = d.room, cfg = d.config;
-  ['demoInfo','demoPlayInfo'].forEach(function(id) {
+  ['demoPlayInfo'].forEach(function(id) {
     var el = document.getElementById(id);
     el.textContent = '';
     el.style.display = 'none';
