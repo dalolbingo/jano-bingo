@@ -601,7 +601,11 @@ if bot:
       bot.send_message(m.chat.id, '❌ የድምፅ ናሙና ማዘጋጀት አልተሳካም። Render logs ይፈትሹ።')
 
   @bot.message_handler(commands=['myid'])
-  def c_myid(m): bot.reply_to(m, f'🆔 የአንተ Telegram ID፦ `{m.from_user.id}`', parse_mode='Markdown')
+  def c_myid(m):
+    u = ensure_user(m.from_user.id, m.from_user.first_name or 'Player')
+    if not u.get('phone'):
+      return bot.reply_to(m, '📱 መጀመሪያ /register በመጫን ስልክ ቁጥርዎን ያስመዝግቡ።')
+    bot.reply_to(m, f'🆔 የተጫዋች መለያዎ (Player ID): {u["phone"]}')
 
   @bot.message_handler(commands=['admin'])
   @bot.message_handler(func=lambda m: m.text == '👑 Admin Panel')
@@ -636,6 +640,53 @@ if bot:
   @bot.message_handler(commands=['play'])
   @bot.message_handler(func=lambda m: (m.text or '').strip().casefold() in {'🎮 play jano bingo', '🎮 play jano bingo'.casefold(), '🎮 play jano bingo'.upper().casefold(), '🎮 play jano bingo'.replace('jano','JANO').casefold()})
   def c_play(m): bot.send_message(m.chat.id, '🎮 ጨዋታውን ለመክፈት ከታች ይጫኑ፦', reply_markup=play_kb('🎮 OPEN Jano Bingo'))
+
+  @bot.message_handler(commands=['transfer'])
+  def c_transfer(m):
+    u = ensure_user(m.from_user.id, m.from_user.first_name or 'Player')
+    if not u.get('phone'):
+      return bot.reply_to(m, '📱 ለማስተላለፍ መጀመሪያ /register በመጫን ይመዝገቡ።')
+    bot.register_next_step_handler(bot.send_message(m.chat.id, '📱 ገንዘብ የሚቀበለውን ተጫዋች የተመዘገበ ስልክ ቁጥር ያስገቡ፦'), s_transfer_phone)
+
+  def s_transfer_phone(m):
+    phone = ''.join(ch for ch in (m.text or '').strip() if ch.isdigit() or ch == '+')
+    if len(phone) < 9 or len(phone) > 16:
+      return bot.reply_to(m, '❌ ትክክለኛ ስልክ ቁጥር ያስገቡ። እንደገና /transfer ይጻፉ።')
+    digits = ''.join(ch for ch in phone if ch.isdigit())
+    last9 = digits[-9:]
+    variants = list({digits, last9, '0' + last9, '251' + last9})
+    with get_db() as c:
+      matches = c.execute("SELECT uid,name,phone FROM users WHERE phone IS NOT NULL AND regexp_replace(phone, '[^0-9]', '', 'g') = ANY(?)", (variants,)).fetchall()
+    if len(matches) == 0:
+      return bot.reply_to(m, '❌ ይህ ስልክ ቁጥር የተመዘገበ ተጫዋች አይደለም።')
+    if len(matches) > 1:
+      return bot.reply_to(m, '⚠️ ይህ ስልክ ቁጥር ከአንድ ተጫዋች ጋር ተያይዟል። እባክዎ ድጋፍን ያነጋግሩ።')
+    recipient = matches[0]
+    if int(recipient['uid']) == int(m.from_user.id):
+      return bot.reply_to(m, '❌ ወደ ራስዎ ገንዘብ ማስተላለፍ አይችሉም።')
+    bot.register_next_step_handler(bot.send_message(m.chat.id, f'👤 ተቀባይ: {recipient["name"]}\n📱 {recipient["phone"]}\n💵 ምን ያህል ETB ማስተላለፍ ይፈልጋሉ? (ክፍያ 0 ETB)'), s_transfer_amount, int(recipient['uid']), recipient['name'])
+
+  def s_transfer_amount(m, recipient_uid, recipient_name):
+    try:
+      amt = float((m.text or '').strip())
+      if not math.isfinite(amt) or amt <= 0 or amt > 1000000: raise ValueError()
+      with get_db() as c:
+        c.execute('BEGIN')
+        sender = c.execute('SELECT name,phone FROM users WHERE uid=? FOR UPDATE', (m.from_user.id,)).fetchone()
+        recipient = c.execute('SELECT uid FROM users WHERE uid=? FOR UPDATE', (recipient_uid,)).fetchone()
+        if not sender or not sender['phone'] or not recipient:
+          return bot.reply_to(m, '❌ ተጫዋቹ አልተገኘም ወይም አልተመዘገበም።')
+        cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, m.from_user.id, amt))
+        if cur.rowcount != 1:
+          return bot.reply_to(m, '❌ በቂ ባላንስ የለዎትም።')
+        c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, recipient_uid))
+        add_tx(c, m.from_user.id, '↗️', f'ለ {recipient_name} የተላከ ገንዘብ', -amt)
+        add_tx(c, recipient_uid, '↙️', f'ከ {sender["name"]} የተቀበሉት ገንዘብ', amt)
+      bot.reply_to(m, f'✅ {amt:.2f} ETB ወደ {recipient_name} ተልኳል።\n💸 ክፍያ: 0 ETB')
+      try: bot.send_message(recipient_uid, f'💰 {sender["name"]}  {amt:.2f} ETB ልከውልዎታል።')
+      except Exception: pass
+    except Exception:
+      bot.reply_to(m, '❌ መጠኑ ትክክል አይደለም። እንደገና /transfer ይጻፉ።')
 
   @bot.message_handler(commands=['balance'])
   @bot.message_handler(func=lambda m: m.text == '💳 ባላንስ (Balance)')
@@ -706,7 +757,7 @@ if bot:
                         ('withdraw', m.from_user.id, amt, md, f'Acc: {acc}', 'pending', int(time.time()))).lastrowid
       if bot and ADMIN_ID:
         kb = IKB(); kb.row(IBtn('✅ ተልኳል', callback_data=f'ap_wd_{rid}'), IBtn('❌ ሰርዝና መልስ', callback_data=f'rj_wd_{rid}'))
-        try: bot.send_message(ADMIN_ID, f'🔔 አዲስ የወጪ ጥያቄ!\n\n🆔 #{rid}\n👤 {m.from_user.first_name or "Player"} (ID: {m.from_user.id})\n💵 {amt:.2f} ETB\n🏦 {md}\n📱 {acc}', reply_markup=kb)
+        try: bot.send_message(ADMIN_ID, f'🔔 አዲስ የወጪ ጥያቄ!\n\n🆔 #{rid}\n👤 {m.from_user.first_name or "Player"}\n📱 {ensure_user(m.from_user.id).get('phone') or 'Not registered'}\n💵 {amt:.2f} ETB\n🏦 {md}\n📱 {acc}', reply_markup=kb)
         except Exception: pass
       bot.reply_to(m, f'✅ የ {amt:.2f} ETB የወጪ ጥያቄዎ ተመዝግቧል።', reply_markup=menu_kb(m.from_user.id))
     except psycopg.Error:
@@ -728,10 +779,10 @@ if bot:
       bot.send_message(call.message.chat.id, f'📊 ሪፖርት\n👥 ተጫዋቾች: {uc}\n💰 Player balances: {pw:.2f} ETB\n💰 ትርፍ(20%): {hs["total_commission"]:.2f} ETB\n🎲 ዙሮች: {hs["total_rounds"]}\n⏳ ጥያቄዎች: {pn}\n🔴 {lv}')
     elif d == 'adm_users':
       with get_db() as c: rows = c.execute('SELECT * FROM users ORDER BY created_at DESC LIMIT 20').fetchall()
-      bot.send_message(call.message.chat.id, '\n'.join(f'• {r["name"]} (`{r["uid"]}`) | Balance:{r["play_wallet"]:.1f} ETB' for r in rows) or 'ምንም ተጫዋች የለም።', parse_mode='Markdown')
+      bot.send_message(call.message.chat.id, '\n'.join(f'• {r["name"]} | 📱 {r["phone"] or "Not registered"} | Balance:{r["play_wallet"]:.1f} ETB' for r in rows) or 'ምንም ተጫዋች የለም።')
     elif d in ('adm_add', 'adm_sub'):
       act = 'add' if d == 'adm_add' else 'sub'
-      bot.register_next_step_handler(bot.send_message(call.message.chat.id, '✏️ ID እና መጠን ይላኩ (ምሳሌ፦ `528672685 100`)', parse_mode='Markdown'), s_adm_bal, act)
+      bot.register_next_step_handler(bot.send_message(call.message.chat.id, '📱 የተጫዋቹን የተመዘገበ ስልክ ቁጥር እና መጠን ይላኩ (ምሳሌ፦ `0912345678 100`)', parse_mode='Markdown'), s_adm_bal, act)
     elif d == 'adm_minp':
       MIN_PLAYERS = 1 if MIN_PLAYERS >= 3 else MIN_PLAYERS + 1
       bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=adm_kb())
@@ -790,16 +841,23 @@ if bot:
   def s_adm_bal(m, act):
     if not is_adm(m.from_user.id): return
     try:
-      u_s, a_s = (m.text or '').strip().split()
-      uid, amt = int(u_s), float(a_s)
-      if uid <= 0 or not math.isfinite(amt) or amt <= 0 or amt > 1000000: raise ValueError()
-      ensure_user(uid)
+      phone_s, a_s = (m.text or '').strip().rsplit(None, 1)
+      phone = ''.join(ch for ch in phone_s if ch.isdigit())
+      amt = float(a_s)
+      if len(phone) < 9 or not math.isfinite(amt) or amt <= 0 or amt > 1000000: raise ValueError()
+      last9 = phone[-9:]
+      variants = list({phone, last9, '0' + last9, '251' + last9})
       with get_db() as c:
+        matches = c.execute("SELECT uid,name,phone FROM users WHERE phone IS NOT NULL AND regexp_replace(phone, '[^0-9]', '', 'g') = ANY(?)", (variants,)).fetchall()
+        if len(matches) != 1:
+          return bot.reply_to(m, '❌ ይህ ስልክ ቁጥር የተመዘገበ አንድ ተጫዋች ብቻ መሆን አለበት።')
+        target = matches[0]
+        uid = target['uid']
         if act == 'add': c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, uid)); add_tx(c, uid, '🎁', 'አድሚን ጨምሯል', amt)
         else: c.execute('UPDATE users SET play_wallet=GREATEST(0,play_wallet-?) WHERE uid=?', (amt, uid)); add_tx(c, uid, '➖', 'አድሚን ቀንሷል', -amt)
         pw = c.execute('SELECT play_wallet FROM users WHERE uid=?', (uid,)).fetchone()[0]
-      bot.reply_to(m, f'✅ ተስተካክሏል! ID `{uid}` Play: {pw:.2f} ETB', parse_mode='Markdown')
-    except Exception: bot.reply_to(m, '❌ ምሳሌ፦ `528672685 100`', parse_mode='Markdown')
+      bot.reply_to(m, f'✅ {target["name"]} ({target["phone"]}) ተስተካክሏል። Play: {pw:.2f} ETB')
+    except Exception: bot.reply_to(m, '❌ ምሳሌ፦ `0912345678 100`', parse_mode='Markdown')
 
   def s_bcast(m):
     if not is_adm(m.from_user.id): return
@@ -885,12 +943,13 @@ def run_bot():
       BotCommand('withdraw', 'Withdraw funds'),
       BotCommand('invite', 'Invite friends'),
       BotCommand('register', 'Register your phone number'),
+      BotCommand('transfer', 'Transfer ETB to a registered player'),
       BotCommand('support', 'Contact support'),
       BotCommand('rules', 'Game rules')
     ]
     bot.set_my_commands(public_commands)
     if ADMIN_ID:
-      bot.set_my_commands(public_commands + [BotCommand('admin', 'Open admin panel'), BotCommand('myid', 'Show Telegram ID'), BotCommand('voicesample', 'Generate Amharic voice sample')], scope=BotCommandScopeChat(ADMIN_ID))
+      bot.set_my_commands(public_commands + [BotCommand('admin', 'Open admin panel'), BotCommand('myid', 'Show your Player ID (phone number)'), BotCommand('voicesample', 'Generate Amharic voice sample')], scope=BotCommandScopeChat(ADMIN_ID))
     print('Telegram command menu configured.')
   except Exception as e:
     print('Telegram command menu setup error:', e)
@@ -1055,7 +1114,7 @@ async def api_wd(req: Request, x_tg_init_data: str = Header(default='')):
     if bot and ADMIN_ID:
       kb = IKB()
       kb.row(IBtn('✅ ተልኳል', callback_data=f'ap_wd_{rid}'), IBtn('❌ ሰርዝና መልስ', callback_data=f'rj_wd_{rid}'))
-      bot.send_message(ADMIN_ID, f'🔔 አዲስ የወጪ ጥያቄ!\n\n🆔 #{rid}\n👤 {u["name"]} (ID: {u["uid"]})\n💵 {amt:.2f} ETB\n📱 {ph}', reply_markup=kb)
+      bot.send_message(ADMIN_ID, f'🔔 አዲስ የወጪ ጥያቄ!\n\n🆔 #{rid}\n👤 {u["name"]}\n📱 {u["phone"] or 'Not registered'}\n💵 {amt:.2f} ETB\n📱 {ph}', reply_markup=kb)
   except Exception:
     pass
   return {'ok': True}
