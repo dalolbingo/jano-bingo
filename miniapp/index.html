@@ -25,7 +25,7 @@ body.light{
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
 html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden}
-.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:74px;position:relative}
+#appRoot{visibility:hidden}.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:74px;position:relative}
 .hdr{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--nav);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd)}
 .brand{display:flex;align-items:center;gap:9px}
 .badge{width:40px;height:40px;border-radius:11px;object-fit:cover;display:block;box-shadow:0 3px 14px rgba(245,158,11,.45);border:1px solid rgba(255,215,80,.65)}
@@ -616,6 +616,7 @@ function renderState(d) {
       return '<div class="rrow ' + (i === 0 ? 't1' : '') + '"><div class="hl"><div class="hico" style="font-weight:800">' + (i < 3 ? md[i] : (i + 1)) + '</div><div style="font-size:13.5px;font-weight:700">' + x.name + '</div></div><div class="c-gold" style="font-size:13.5px;font-weight:800">' + x.total_won.toFixed(2) + ' ETB</div></div>';
     }).join('');
   }
+  document.getElementById('appRoot').style.visibility = 'visible';
 }
 
 async function pollState() {
