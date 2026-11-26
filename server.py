@@ -434,7 +434,7 @@ def ensure_daily_promo_images():
     ft=f(25); bb=d.textbbox((0,0),slogan,font=ft)
     d.text(((w-(bb[2]-bb[0]))//2,760),slogan,font=ft,fill=(255,245,210),stroke_width=2,stroke_fill=(25,8,40))
     d.rounded_rectangle((115,1080,605,1170), radius=34, fill=gold, outline=(255,245,190), width=4)
-    cta='PLAY JANO BINGO'
+    cta='PLAY Jano Bingo'
     ft=f(34); bb=d.textbbox((0,0),cta,font=ft)
     d.text(((w-(bb[2]-bb[0]))//2,1098),cta,font=ft,fill=(35,12,48))
     im.save(path,'JPEG',quality=92,optimize=True)
@@ -470,7 +470,7 @@ def daily_promo_loop():
           for uid in uids:
             try:
               with open(path, 'rb') as photo:
-                bot.send_photo(uid, photo, caption=cfg['caption'], reply_markup=play_kb('🎮 PLAY JANO BINGO'))
+                bot.send_photo(uid, photo, caption=cfg['caption'], reply_markup=play_kb('🎮 PLAY Jano Bingo'))
               sent += 1
             except Exception as e:
               print(f'Daily promo failed for {uid}:', type(e).__name__)
@@ -635,7 +635,7 @@ if bot:
 
   @bot.message_handler(commands=['play'])
   @bot.message_handler(func=lambda m: (m.text or '').strip().casefold() in {'🎮 play jano bingo', '🎮 play jano bingo'.casefold(), '🎮 play jano bingo'.upper().casefold(), '🎮 play jano bingo'.replace('jano','JANO').casefold()})
-  def c_play(m): bot.send_message(m.chat.id, '🎮 ጨዋታውን ለመክፈት ከታች ይጫኑ፦', reply_markup=play_kb('🎮 OPEN JANO BINGO'))
+  def c_play(m): bot.send_message(m.chat.id, '🎮 ጨዋታውን ለመክፈት ከታች ይጫኑ፦', reply_markup=play_kb('🎮 OPEN Jano Bingo'))
 
   @bot.message_handler(commands=['balance'])
   @bot.message_handler(func=lambda m: m.text == '💳 ባላንስ (Balance)')
