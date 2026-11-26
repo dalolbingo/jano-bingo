@@ -1006,6 +1006,31 @@ async def api_dep(req: Request, x_tg_init_data: str = Header(default='')):
   except psycopg.IntegrityError: raise HTTPException(409, 'ይህ Transaction ID ቀድሞ ተጠቅሟል!')
   return {'ok': True}
 
+@app.post('/api/transfer')
+async def api_transfer(req: Request, x_tg_init_data: str = Header(default='')):
+  u, b = auth_user(x_tg_init_data), await req.json()
+  phone = ''.join(ch for ch in str(b.get('phone', '')).strip() if ch.isdigit() or ch == '+')
+  try: amt = float(b.get('amount', 0))
+  except (TypeError, ValueError): raise HTTPException(400, 'የገንዘብ መጠኑ ትክክል አይደለም!')
+  if not math.isfinite(amt) or amt <= 0 or amt > 1000000:
+    raise HTTPException(400, 'ትክክለኛ የማስተላለፊያ መጠን ያስገቡ!')
+  if len(phone) < 9 or len(phone) > 16: raise HTTPException(400, 'ትክክለኛ የተመዘገበ ስልክ ቁጥር ያስገቡ!')
+  digits = phone.lstrip('+')
+  variants = {phone, digits, '0' + digits[-9:] if len(digits) >= 9 else digits, '+251' + digits[-9:] if len(digits) >= 9 else digits}
+  with get_db() as c:
+    c.execute('BEGIN IMMEDIATE')
+    recipient = c.execute('SELECT uid,name,phone FROM users WHERE phone IS NOT NULL AND regexp_replace(phone, \'[^0-9]\', \'\', \'g\') = ANY(?)', (list({''.join(ch for ch in v if ch.isdigit()) for v in variants}),)).fetchone()
+    if not recipient: raise HTTPException(404, 'ይህ ስልክ ቁጥር የተመዘገበ ተጫዋች አይደለም!')
+    if int(recipient['uid']) == int(u['uid']): raise HTTPException(400, 'ወደ ራስዎ ገንዘብ ማስተላለፍ አይችሉም!')
+    sender = c.execute('SELECT play_wallet,phone FROM users WHERE uid=?', (u['uid'],)).fetchone()
+    if not sender or not sender['phone']: raise HTTPException(403, 'ለማስተላለፍ መጀመሪያ ይመዝገቡ!')
+    cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, u['uid'], amt))
+    if cur.rowcount != 1: raise HTTPException(400, 'በቂ ባላንስ የለዎትም!')
+    c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, recipient['uid']))
+    add_tx(c, u['uid'], '↗️', f'ለ {recipient["name"]} የተላከ ገንዘብ', -amt)
+    add_tx(c, recipient['uid'], '↙️', f'ከ {u["name"]} የተቀበሉት ገንዘብ', amt)
+  return {'ok': True, 'recipient': recipient['name'], 'amount': round(amt, 2), 'fee': 0}
+
 @app.post('/api/withdraw')
 async def api_wd(req: Request, x_tg_init_data: str = Header(default='')):
   u, b = auth_user(x_tg_init_data), await req.json()
