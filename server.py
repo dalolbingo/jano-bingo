@@ -634,8 +634,8 @@ if bot:
       bot.send_photo(m.chat.id, photo, caption='👋 Welcome to Jano Bingo! Choose an option below 👇', reply_markup=menu_kb(m.from_user.id))
 
   @bot.message_handler(commands=['play'])
-  @bot.message_handler(func=lambda m: m.text == '🎮 Play Jano Bingo')
-  def c_play(m): bot.send_message(m.chat.id, 'Good luck Jano Bingo 🍀', reply_markup=play_kb('🎲 Play Jano Bingo'))
+  @bot.message_handler(func=lambda m: (m.text or '').strip().casefold() in {'🎮 play jano bingo', '🎮 play jano bingo'.casefold(), '🎮 play jano bingo'.upper().casefold(), '🎮 play jano bingo'.replace('jano','JANO').casefold()})
+  def c_play(m): bot.send_message(m.chat.id, '🎮 ጨዋታውን ለመክፈት ከታች ይጫኑ፦', reply_markup=play_kb('🎮 OPEN JANO BINGO'))
 
   @bot.message_handler(commands=['balance'])
   @bot.message_handler(func=lambda m: m.text == '💳 ባላንስ (Balance)')
