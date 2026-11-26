@@ -613,6 +613,14 @@ if bot:
     if not is_adm(m.from_user.id): return bot.reply_to(m, '⛔ ለአድሚን ብቻ!')
     bot.send_message(m.chat.id, '👑 Jano Bingo — የአድሚን መቆጣጠሪያ', reply_markup=adm_kb())
 
+  @bot.message_handler(commands=['resetplayers'])
+  def c_resetplayers(m):
+    if not is_adm(m.from_user.id): return bot.reply_to(m, '⛔ ለአድሚን ብቻ!')
+    kb = IKB()
+    kb.row(IBtn('🗑️ Confirm full player reset', callback_data='adm_reset_players_confirm'),
+           IBtn('❌ Cancel', callback_data='adm_reset_players_cancel'))
+    bot.send_message(m.chat.id, '⚠️ This will permanently delete every player account except the admin account, all player balances, transactions, deposit/withdraw requests, referral records, player and bot rankings, and cards in progress. Game settings and house statistics will remain. Continue?', reply_markup=kb)
+
   @bot.message_handler(commands=['menu'])
   def c_menu(m):
     with open(ensure_welcome_banner(), 'rb') as photo:
@@ -811,6 +819,24 @@ if bot:
       bot.send_message(call.message.chat.id, '⚠️ Reset leaderboard totals for all real players and clear bot rankings? Wallets, deposits, withdrawals, transactions, match counts and win counts will remain unchanged.', reply_markup=kb)
     elif d == 'adm_reset_rank_cancel':
       bot.send_message(call.message.chat.id, 'Reset cancelled. No ranking data was changed.')
+    elif d == 'adm_reset_players_cancel':
+      bot.send_message(call.message.chat.id, 'Full player reset cancelled. No data was changed.')
+    elif d == 'adm_reset_players_confirm':
+      with get_db() as c:
+        c.execute('BEGIN')
+        c.execute('DELETE FROM requests')
+        c.execute('DELETE FROM transactions')
+        c.execute('DELETE FROM room_cards')
+        c.execute('DELETE FROM bot_rankings')
+        c.execute('DELETE FROM users WHERE uid<>?', (ADMIN_ID,))
+        if ADMIN_ID:
+          c.execute('UPDATE users SET play_wallet=0,win_wallet=0,matches_played=0,wins=0,total_won=0,referred_by=NULL WHERE uid=?', (ADMIN_ID,))
+      with room_lock:
+        for room in rooms.values():
+          room.update({'phase':'WAITING','countdown':CD_SEC,'cards':{},'called':[],'deck':[],'winner':None,'win_until':0.0,'tick':time.time()})
+          if room['stake'] == 10: seed_bots(room)
+          else: room.update({'bot_queue':[],'bot_start_at':None,'bot_index':0})
+      bot.send_message(call.message.chat.id, '✅ Full player reset completed. All player accounts and related records were deleted. The admin account, game settings, and house statistics were preserved.')
     elif d == 'adm_reset_rank_confirm':
       with get_db() as c:
         c.execute('BEGIN')
