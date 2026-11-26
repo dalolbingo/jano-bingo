@@ -242,6 +242,18 @@ body.light .status-banner{color:#1d4ed8}
         <button class="btnd" onclick="openDrw('dep')">↓ ገቢ (DEPOSIT)</button>
         <button class="btnw" onclick="openDrw('wd')">↑ ወጪ (WITHDRAW)</button>
       </div>
+      <div style="margin-top:10px">
+        <button class="btnp" style="width:100%" onclick="document.getElementById('transferDrw').classList.toggle('on')">↔️ ገንዘብ አስተላልፍ (TRANSFER)</button>
+      </div>
+      <div id="transferDrw" class="drw">
+        <div class="shd c-gold">↔️ ከተጫዋች ወደ ተጫዋች (FREE TRANSFER)</div>
+        <div class="fstack">
+          <input id="transferPhone" class="rinp" type="tel" placeholder="የተቀባዩ የተመዘገበ ስልክ ቁጥር" />
+          <input id="transferAmt" class="rinp" type="number" min="1" step="0.01" placeholder="የሚላከው መጠን (ETB)" />
+          <button class="btnp" onclick="sendTransfer()">✔️ አስተላልፍ (0 ETB FEE)</button>
+          <div class="h">ሁለቱም ተጫዋቾች መመዝገብ አለባቸው። ክፍያ የለውም።</div>
+        </div>
+      </div>
 
       <div id="depDrw" class="drw">
         <div class="shd c-em">📲 የገቢ መመሪያ (TeleBirr / CBE Birr)</div>
@@ -688,6 +700,21 @@ async function sendWd() {
     document.getElementById('wdPh').value = '';
     document.getElementById('wdDrw').classList.remove('on');
     toast('✅ የወጪ ጥያቄዎ ለአድሚን ተልኳል!');
+    await pollState();
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+async function sendTransfer() {
+  var phone = document.getElementById('transferPhone').value.trim();
+  var amount = parseFloat(document.getElementById('transferAmt').value);
+  if (!phone || !Number.isFinite(amount) || amount <= 0) return toast('❌ ስልክ ቁጥርና መጠን ያስገቡ');
+  if (!confirm('ለ ' + phone + ' ' + amount.toFixed(2) + ' ETB በነፃ ማስተላለፍ ይፈልጋሉ?')) return;
+  try {
+    var result = await apiReq('/api/transfer', 'POST', {phone: phone, amount: amount});
+    document.getElementById('transferPhone').value = '';
+    document.getElementById('transferAmt').value = '';
+    document.getElementById('transferDrw').classList.remove('on');
+    toast('✅ ' + result.amount.toFixed(2) + ' ETB ወደ ' + result.recipient + ' ተላክ!');
     await pollState();
   } catch (e) { toast('❌ ' + e.message); }
 }
