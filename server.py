@@ -828,8 +828,11 @@ if bot:
   @bot.message_handler(commands=['register'])
   @bot.message_handler(func=lambda m: m.text == '📝 ምዝገባ (Register)')
   def c_reg(m):
+    u = ensure_user(m.from_user.id, m.from_user.first_name or 'Player')
+    if u.get('phone'):
+      return bot.send_message(m.chat.id, f'✅ አስቀድመው ተመዝግበዋል! (Already registered)\n📱 {u["phone"]}')
     kb = RKB(resize_keyboard=True, one_time_keyboard=True); kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
-    bot.send_message(m.chat.id, '📱 ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
+    bot.send_message(m.chat.id, '📱 ለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
 
   @bot.message_handler(commands=['support'])
   @bot.message_handler(func=lambda m: m.text == '🎧 ድጋፍ (Support)')
@@ -853,9 +856,13 @@ if bot:
       me = bot.get_me()
       bot.send_message(call.message.chat.id, f'🎁 ለእያንዳንዱ ስኬታማ ግብዣ 15 ETB ይሸለሙ!\n🔗 https://t.me/{me.username}?start={uid}')
     elif call.data == 'home_register':
-      kb = RKB(resize_keyboard=True, one_time_keyboard=True)
-      kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
-      bot.send_message(call.message.chat.id, '📱 ለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
+      u = ensure_user(uid, call.from_user.first_name or 'Player')
+      if u.get('phone'):
+        bot.send_message(call.message.chat.id, f'✅ አስቀድመው ተመዝግበዋል! (Already registered)\n📱 {u["phone"]}')
+      else:
+        kb = RKB(resize_keyboard=True, one_time_keyboard=True)
+        kb.add(KBtn('📱 ስልክ ቁጥር አጋራ', request_contact=True))
+        bot.send_message(call.message.chat.id, '📱 ለመመዝገብ ስልክ ቁጥርዎን ያጋሩ 👇', reply_markup=kb)
     elif call.data == 'home_rules':
       c_rules(call.message)
     elif call.data == 'home_admin':
