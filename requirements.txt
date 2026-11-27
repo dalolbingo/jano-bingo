@@ -1,4 +1,6 @@
 fastapi==0.115.6
 uvicorn==0.34.0
 pyTelegramBotAPI==4.25.0
-psycopg[binary]==3.2.4
+psycopg[binary]==3.2.10
+
+Pillow>=10.0.0
