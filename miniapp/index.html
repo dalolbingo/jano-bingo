@@ -399,7 +399,7 @@ if (tg) {
 
 var stake = 10, stakeSelected = false, soundOn = true, autoMark = true;
 var lastCalledBall = null, lastWinnerCard = null, manualMarks = {}, lastRoundPhase = null, roundFxTimer = null;
-var latestState = null, busy = false, tTmr = null, stateLoading = false, stateLoaded = false;
+var latestState = null, busy = false, tTmr = null, stateLoading = false, stateLoaded = false, refreshAfterLoad = false;
 var voiceAudio = new Audio(), actx = null;
 
 function ensureAudioUnlocked() {
@@ -702,7 +702,7 @@ function renderState(d) {
 }
 
 async function pollState() {
-  if (stateLoading) return;
+  if (stateLoading) { refreshAfterLoad = true; return; }
   if (!initData) {
     document.getElementById('loadStatus').style.display = 'none';
     document.getElementById('appRoot').style.display = 'none';
@@ -734,6 +734,10 @@ async function pollState() {
     }
   } finally {
     stateLoading = false;
+    if (refreshAfterLoad) {
+      refreshAfterLoad = false;
+      pollState();
+    }
   }
 }
 
@@ -824,8 +828,6 @@ function setStake(s) {
   lastCalledBall = null;
   lastWinnerCard = null;
   manualMarks = {};
-  document.getElementById('gameSelectView').style.display = 'none';
-  document.getElementById('gameBtn').style.display = 'inline-block';
   document.getElementById('activeStakePill').textContent = stake + ' ETB ROOM';
   document.getElementById('playingStakePill').textContent = stake + ' ETB ROOM';
   pollState();
