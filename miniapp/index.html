@@ -578,6 +578,21 @@ function checkWinLocal(grid, markMap) {
   return null;
 }
 
+var countdownAnchorValue = 0;
+var countdownAnchorAt = 0;
+
+function updateCountdownDisplay() {
+  if (!latestState || !stakeSelected || latestState.room.phase !== 'COUNTDOWN') return;
+  var seconds = Math.max(0, countdownAnchorValue - Math.floor((Date.now() - countdownAnchorAt) / 1000));
+  var tEl = document.getElementById('lTmr');
+  var ban = document.getElementById('statusBanner');
+  if (!tEl || !ban || document.getElementById('lobbyView').style.display === 'none') return;
+  tEl.textContent = seconds + 's';
+  tEl.className = 'sval' + (seconds <= 5 ? ' c-red' : ' c-gold');
+  ban.className = 'status-banner counting';
+  ban.textContent = '🔥 ጨዋታው በ ' + seconds + ' ሰከንድ ውስጥ ይጀምራል!';
+}
+
 function renderState(d) {
   latestState = d;
   var u = d.user, r = d.room, cfg = d.config;
@@ -623,10 +638,9 @@ function renderState(d) {
       ban.className = 'status-banner';
       ban.textContent = '⏳ ተጫዋቾችን በመጠበቅ ላይ (' + r.players + ' / ' + r.min_players + '). ካርድ ሲያዙ ይጀምራል።';
     } else {
-      tEl.textContent = r.countdown + 's';
-      tEl.className = 'sval' + (r.countdown <= 5 ? ' c-red' : ' c-gold');
-      ban.className = 'status-banner counting';
-      ban.textContent = '🔥 ጨዋታው በ ' + r.countdown + ' ሰከንድ ውስጥ ይጀምራል!';
+      countdownAnchorValue = Number(r.countdown) || 0;
+      countdownAnchorAt = Date.now();
+      updateCountdownDisplay();
     }
 
     document.getElementById('selLbl').textContent = 'ካርዶችዎ፡ ' + r.my_cards.length + ' / 4';
@@ -1050,6 +1064,7 @@ function cpTxt(t, m) {
 
 pollState();
 setInterval(pollState, 5000);
+setInterval(updateCountdownDisplay, 250);
 </script>
 </body>
 </html>
