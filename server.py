@@ -1192,13 +1192,13 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
             'winner_left': max(0, int(r['win_until'] - time.time())) if r['phase'] == 'WINNER' else 0}
   with get_db() as c:
     txs = [dict(x) for x in c.execute('SELECT icon,title,amount,created_at FROM transactions WHERE uid=? ORDER BY id DESC LIMIT 25', (u['uid'],)).fetchall()]
-    top = [dict(x) for x in c.execute("""SELECT name,total_won FROM (
-      SELECT name,total_won FROM users WHERE total_won>0
-      UNION ALL
-      SELECT name,total_won FROM bot_rankings WHERE total_won>0
-    ) winners ORDER BY total_won DESC LIMIT 10""").fetchall()]
-  return {'user': {'phone': u.get('phone') or 'Not registered', 'name': u['name'], 'play_wallet': round(u['play_wallet'],2), 'matches_played': u['matches_played'], 'wins': u['wins']},
-          'config': {'telebirr_name': TB_NAME, 'telebirr_phone': TB_PHONE, 'support': SUPPORT}, 'room': snap, 'history': txs, 'rank': top}
+    welcome_bonus_claimed = bool(c.execute(
+      "SELECT EXISTS(SELECT 1 FROM transactions WHERE uid=? AND title='የአዲስ ምዝገባ ቦነስ' AND amount=10)",
+      (u['uid'],)
+    ).fetchone()[0])
+  return {'user': {'phone': u.get('phone') or 'Not registered', 'name': u['name'], 'play_wallet': round(u['play_wallet'],2), 'matches_played': u['matches_played'], 'wins': u['wins'],
+                   'welcome_bonus_claimed': welcome_bonus_claimed},
+          'config': {'telebirr_name': TB_NAME, 'telebirr_phone': TB_PHONE, 'support': SUPPORT}, 'room': snap, 'history': txs}
 
 @app.post('/api/preview_card')
 async def api_preview_card(req: Request, x_tg_init_data: str = Header(default='')):
