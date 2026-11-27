@@ -914,9 +914,9 @@ if bot:
     for u in uids:
       try:
         if m.content_type == 'text':
-          bot.send_message(u, f'📢 ማስታወቂያ\\n\\n{m.text}')
+          bot.send_message(u, f'📢 ማስታወቂያ\\n\\n{m.text}', reply_markup=play_kb('🎮 PLAY Jano Bingo'))
         else:
-          bot.copy_message(u, m.chat.id, m.message_id)
+          bot.copy_message(u, m.chat.id, m.message_id, reply_markup=play_kb('🎮 PLAY Jano Bingo'))
         s += 1
       except Exception: pass
     bot.reply_to(m, f'✅ ለ {s} ተጫዋቾች ተልኳል።')
