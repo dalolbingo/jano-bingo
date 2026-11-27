@@ -417,6 +417,35 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
       <div style="font-size:13px;line-height:1.7;color:var(--mut)">Register your phone number with Jano Bingo to receive the 10 ETB welcome bonus. The bonus is credited to your wallet automatically and can be received once per player.</div>
       <div id="bonusHint" style="font-size:12px;line-height:1.6;margin-top:10px;color:var(--gold2);font-weight:700"></div>
     </div>
+    <div class="scard" style="overflow:hidden;padding:0;border:1px solid rgba(16,185,129,.45);background:linear-gradient(145deg,rgba(16,185,129,.18),rgba(14,165,233,.10) 48%,var(--card) 100%)">
+      <div style="padding:18px 15px 14px;text-align:center;position:relative">
+        <div style="font-size:46px;line-height:1;margin-bottom:8px">🤝🎁</div>
+        <div style="font-size:12px;font-weight:900;letter-spacing:2px;color:#34d399">INVITE FRIENDS</div>
+        <div style="font-size:40px;line-height:1.1;font-weight:1000;color:#34d399;margin:7px 0">+10 ETB</div>
+        <div style="font-size:13px;line-height:1.6;color:var(--mut)">Earn 10 ETB for every successful friend invitation.</div>
+      </div>
+      <div style="margin:0 14px 13px;padding:12px;border-radius:13px;background:rgba(2,6,23,.28);border:1px solid rgba(16,185,129,.24)">
+        <div style="font-size:11px;font-weight:800;color:var(--mut);margin-bottom:7px">YOUR PERSONAL INVITE LINK</div>
+        <div id="inviteLink" style="font-size:11px;line-height:1.5;color:var(--txt);overflow-wrap:anywhere;margin-bottom:10px">Loading your invite link...</div>
+        <button type="button" onclick="copyInviteLink()" style="width:100%;padding:12px;border:0;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:13px;font-weight:900">🔗 COPY INVITE LINK</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 14px">
+        <div style="padding:11px 8px;text-align:center;border-radius:12px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.22)">
+          <div id="inviteCount" style="font-size:23px;font-weight:900;color:#34d399">0</div>
+          <div style="font-size:10px;color:var(--mut);font-weight:800">SUCCESSFUL INVITES</div>
+        </div>
+        <div style="padding:11px 8px;text-align:center;border-radius:12px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.22)">
+          <div id="inviteEarned" style="font-size:23px;font-weight:900;color:#60a5fa">0 ETB</div>
+          <div style="font-size:10px;color:var(--mut);font-weight:800">TOTAL EARNED</div>
+        </div>
+      </div>
+      <div id="invitePending" style="padding:0 14px 14px;text-align:center;font-size:11px;color:var(--mut)">Pending referrals: 0</div>
+    </div>
+    <div class="scard" style="padding:14px">
+      <div class="shd"><span>🚀 HOW INVITE REWARDS WORK</span></div>
+      <div style="font-size:12.5px;line-height:1.8;color:var(--mut)">1. Share your personal invite link with a new player.<br>2. Your friend registers their phone number.<br>3. Your friend makes their first deposit.<br>4. After the admin approves that deposit, <strong style="color:#34d399">10 ETB</strong> is automatically added to your wallet.</div>
+      <div style="font-size:11px;line-height:1.6;margin-top:9px;color:var(--gold2);font-weight:700">Only new players who join through your link and complete their first approved deposit count as a successful invite.</div>
+    </div>
   </section>
 
   <section id="tab-profile" class="tab">
@@ -617,6 +646,25 @@ function updateCountdownDisplay() {
   ban.textContent = '🔥 ጨዋታው በ ' + seconds + ' ሰከንድ ውስጥ ይጀምራል!';
 }
 
+function copyInviteLink() {
+  var el = document.getElementById('inviteLink');
+  var link = el ? el.textContent.trim() : '';
+  if (!link || !link.startsWith('https://t.me/')) {
+    showToast('Invite link is not ready yet.');
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(function(){ showToast('Invite link copied!'); }).catch(function(){ showToast('Could not copy link. Please copy it manually.'); });
+  } else {
+    var field = document.createElement('textarea');
+    field.value = link; field.style.position = 'fixed'; field.style.opacity = '0';
+    document.body.appendChild(field); field.select();
+    try { document.execCommand('copy'); showToast('Invite link copied!'); }
+    catch(e) { showToast('Could not copy link. Please copy it manually.'); }
+    document.body.removeChild(field);
+  }
+}
+
 function renderState(d) {
   latestState = d;
   var u = d.user, r = d.room, cfg = d.config;
@@ -630,6 +678,14 @@ function renderState(d) {
   document.getElementById('prSup').textContent = cfg.support;
   var bonusStatus = document.getElementById('bonusStatus');
   var bonusHint = document.getElementById('bonusHint');
+  var inviteLink = document.getElementById('inviteLink');
+  if (inviteLink) inviteLink.textContent = u.invite_link || 'Invite link unavailable';
+  var inviteCount = document.getElementById('inviteCount');
+  if (inviteCount) inviteCount.textContent = Number(u.invite_success_count || 0);
+  var inviteEarned = document.getElementById('inviteEarned');
+  if (inviteEarned) inviteEarned.textContent = Number(u.invite_earned || 0).toFixed(2) + ' ETB';
+  var invitePending = document.getElementById('invitePending');
+  if (invitePending) invitePending.textContent = 'Pending referrals: ' + Number(u.invite_pending_count || 0);
   if (u.welcome_bonus_claimed) {
     bonusStatus.textContent = '✅ WELCOME BONUS CLAIMED';
     bonusStatus.style.background = 'rgba(16,185,129,.14)';
