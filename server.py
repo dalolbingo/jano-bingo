@@ -777,10 +777,6 @@ if bot:
         u = c.execute('SELECT play_wallet FROM users WHERE uid=?', (m.from_user.id,)).fetchone()
         if not u or not math.isfinite(float(amt)) or amt < 100 or u['play_wallet'] < amt:
           return bot.reply_to(m, '❌ በቂ ባላንስ የለዎትም ወይም የገንዘብ መጠኑ ትክክል አይደለም!')
-        cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, m.from_user.id, amt))
-        if cur.rowcount != 1:
-          return bot.reply_to(m, '❌ በቂ ባላንስ የለዎትም!')
-        add_tx(c, m.from_user.id, '💸', f'የወጪ ጥያቄ ({md})', -amt)
         rid = c.execute('INSERT INTO requests (req_type,uid,amount,method,details,status,created_at) VALUES (?,?,?,?,?,?,?)',
                         ('withdraw', m.from_user.id, amt, md, f'Acc: {acc}', 'pending', int(time.time()))).lastrowid
       if bot and ADMIN_ID:
@@ -906,15 +902,34 @@ if bot:
           try: bot.send_message(uid, f'❌ የ {amt:.2f} ETB ገቢ ጥያቄዎ ተቀባይነት አላገኘም። እባክዎ አድሚንን ያነጋግሩ።')
           except Exception: pass
         elif rt == 'wd' and act == 'ap':
+          # Legacy pending requests may already have a debit transaction; avoid charging them twice.
+          already_debited = c.execute(
+            "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%' LIMIT 1",
+            (uid, -float(amt))
+          ).fetchone()
+          if not already_debited:
+            cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, uid, amt))
+            if cur.rowcount != 1:
+              bot.send_message(call.message.chat.id, '❌ የተጫዋቹ ባላንስ በቂ አይደለም። ጥያቄው በመጠባበቅ ላይ ይቆያል።')
+              return
+            add_tx(c, uid, '💸', f'የወጪ ክፍያ ጸድቋል ({rq["method"]})', -amt)
           c.execute("UPDATE requests SET status='paid' WHERE id=?", (int(rid),))
-          bot.edit_message_text(call.message.text + f'\n\n✅ ተልኳል ({amt:.2f} ETB)', call.message.chat.id, call.message.message_id)
-          try: bot.send_message(uid, f'✅ የ {amt:.2f} ETB ወጪዎ ተልኳል!')
+          bot.edit_message_text(call.message.text + f'\\n\\n✅ ተልኳል ({amt:.2f} ETB)', call.message.chat.id, call.message.message_id)
+          try: bot.send_message(uid, f'✅ የ {amt:.2f} ETB ወጪዎ ተልኳል።')
           except Exception: pass
         else:
+          # Refund only legacy pending requests that were debited when they were created.
+          already_debited = c.execute(
+            "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%' LIMIT 1",
+            (uid, -float(amt))
+          ).fetchone()
           c.execute("UPDATE requests SET status='rejected' WHERE id=?", (int(rid),))
-          c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, uid))
-          add_tx(c, uid, '↩️', 'ወጪ ተመልሷል', amt)
-          bot.edit_message_text(call.message.text + '\n\n❌ ተሰርዞ ተመልሷል', call.message.chat.id, call.message.message_id)
+          if already_debited:
+            c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, uid))
+            add_tx(c, uid, '↩️', 'ወጪ ተመልሷል', amt)
+          bot.edit_message_text(call.message.text + '\\n\\n❌ ተሰርዟል' + (' (old balance refunded)' if already_debited else ''), call.message.chat.id, call.message.message_id)
+          try: bot.send_message(uid, f'❌ የ {amt:.2f} ETB የወጪ ጥያቄዎ ተሰርዟል.' + (' የቀድሞ ተቀናሽ ገንዘብ ተመልሷል።' if already_debited else ''))
+          except Exception: pass
 
   def s_adm_player_info(m):
     if not is_adm(m.from_user.id): return
