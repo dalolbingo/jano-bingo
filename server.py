@@ -809,7 +809,7 @@ if bot:
     elif d == 'adm_pending_payouts':
       with get_db() as c:
         payouts = c.execute("""
-          SELECT r.id,r.uid,r.amount,r.method,r.details,r.created_at,u.name,u.phone
+          SELECT r.id,r.uid,r.amount,r.method,r.details,r.created_at,u.name,u.phone,u.play_wallet
           FROM requests r LEFT JOIN users u ON u.uid=r.uid
           WHERE r.req_type='withdraw' AND r.status='pending'
           ORDER BY r.created_at ASC LIMIT 30
@@ -827,7 +827,8 @@ if bot:
             f'💸 <b>PAYOUT #{p["id"]}</b>\n'
             f'👤 {name}\n'
             f'📱 <code>{phone}</code>\n'
-            f'💵 <b>{float(p["amount"] or 0):.2f} ETB</b>\n'
+            f'💵 <b>Request: {float(p["amount"] or 0):.2f} ETB</b>\n'
+            f'💰 Balance: {float(p["play_wallet"] or 0):.2f} ETB\n'
             f'🏦 {p["method"] or "Unknown"}\n'
             f'📄 {details}\n'
             f'🕒 {stamp}'
