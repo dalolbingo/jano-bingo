@@ -86,7 +86,20 @@ body.light .status-banner{color:#1d4ed8}
 .cstage{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px;display:grid;grid-template-columns:1fr 54px;gap:8px;align-items:center;box-shadow:var(--sh)}
 .cbox{display:flex;flex-direction:column;align-items:center}
 .sttl{font-size:9.5px;font-weight:800;color:var(--mut);margin-bottom:6px}
-.ball{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;border:2.5px solid rgba(255,255,255,.55);box-shadow:inset -5px -7px 14px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.45)}
+.ball{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;border:2.5px solid rgba(255,255,255,.55);box-shadow:inset -5px -7px 14px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.45);position:relative;isolation:isolate}
+.ball.rolling{animation:bingo-roll-in .85s cubic-bezier(.2,.8,.25,1) both}
+.ball.rolling:after{content:'';position:absolute;inset:-7px;border:2px solid rgba(251,191,36,.8);border-radius:50%;animation:ball-ring .85s ease-out both;pointer-events:none}
+@keyframes bingo-roll-in{0%{transform:translateX(65px) translateY(-18px) rotate(-240deg) scale(.45);filter:blur(3px);opacity:.2}65%{transform:translateX(-5px) translateY(2px) rotate(25deg) scale(1.12);filter:blur(0);opacity:1}100%{transform:translate(0) rotate(0) scale(1)}}
+@keyframes ball-ring{0%{transform:scale(.72);opacity:.9}100%{transform:scale(1.45);opacity:0}}
+.mn.pop{animation:number-pop .55s ease-out both}
+@keyframes number-pop{0%{transform:scale(.65);opacity:.4}65%{transform:scale(1.22)}100%{transform:scale(1);opacity:1}}
+.pc.cu.pop{animation:card-hit .55s ease-out both}
+@keyframes card-hit{0%{transform:scale(.88)}60%{transform:scale(1.12);box-shadow:0 0 14px rgba(251,191,36,.75)}100%{transform:scale(1)}}
+#playView{position:relative}
+#roundFx{display:none;position:absolute;z-index:8;top:34%;left:50%;transform:translate(-50%,-50%);padding:13px 22px;border:1px solid rgba(251,191,36,.85);border-radius:16px;background:rgba(10,15,27,.94);color:#fbbf24;font-size:20px;font-weight:1000;letter-spacing:2px;text-align:center;box-shadow:0 0 35px rgba(245,158,11,.35);pointer-events:none;white-space:nowrap}
+#roundFx.show{display:block;animation:round-start-pop 1.9s ease both}
+@keyframes round-start-pop{0%{opacity:0;transform:translate(-50%,-35%) scale(.55)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}72%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-65%) scale(.92)}}
+@media(prefers-reduced-motion:reduce){.ball.rolling,.ball.rolling:after,.mn.pop,.pc.cu.pop,#roundFx.show{animation:none!important}}
 .bB{background:radial-gradient(circle at 30% 28%,#60a5fa,#2563eb 65%,#1e3a8a)}
 .bI{background:radial-gradient(circle at 30% 28%,#f87171,#dc2626 65%,#7f1d1d)}
 .bN{background:radial-gradient(circle at 30% 28%,#34d399,#059669 65%,#064e3b)}
@@ -223,6 +236,7 @@ body.light .status-banner{color:#1d4ed8}
     </div>
 
     <div id="playView" style="display:none">
+      <div id="roundFx" aria-hidden="true">🎱 GAME ON! 🎱</div>
       <div class="srow3">
         <div class="sbox"><div class="slbl">DERASH</div><div id="pDer" class="sval c-gold">0</div></div>
         <div class="sbox"><div class="slbl">PLAYERS</div><div id="pPly" class="sval c-blue">0</div></div>
@@ -366,7 +380,7 @@ if (tg) {
 }
 
 var stake = 10, soundOn = true, autoMark = true;
-var lastCalledBall = null, lastWinnerCard = null, manualMarks = {};
+var lastCalledBall = null, lastWinnerCard = null, manualMarks = {}, lastRoundPhase = null, roundFxTimer = null;
 var latestState = null, busy = false, tTmr = null, stateLoading = false, stateLoaded = false;
 var voiceAudio = new Audio(), actx = null;
 
@@ -498,6 +512,7 @@ function renderState(d) {
   document.getElementById('agPhone').textContent = cfg.telebirr_phone;
 
   if (r.phase === 'WAITING' || r.phase === 'COUNTDOWN') {
+    lastRoundPhase = r.phase;
     document.getElementById('winOv').classList.remove('on');
     document.getElementById('playView').style.display = 'none';
     document.getElementById('lobbyView').style.display = 'block';
@@ -542,6 +557,15 @@ function renderState(d) {
       }).join('');
     }
   } else if (r.phase === 'PLAYING' || r.phase === 'WINNER') {
+    if (r.phase === 'PLAYING' && lastRoundPhase !== 'PLAYING' && lastRoundPhase !== 'WINNER') {
+      var fx = document.getElementById('roundFx');
+      fx.classList.remove('show');
+      void fx.offsetWidth;
+      fx.classList.add('show');
+      clearTimeout(roundFxTimer);
+      roundFxTimer = setTimeout(function(){ fx.classList.remove('show'); }, 2100);
+    }
+    lastRoundPhase = r.phase;
     document.getElementById('lobbyView').style.display = 'none';
     document.getElementById('playView').style.display = 'block';
     document.getElementById('pDer').textContent = r.derash;
@@ -551,7 +575,8 @@ function renderState(d) {
     var calMap = {};
     r.called.forEach(function(n) { calMap[n] = true; });
     var cur = r.called.length ? r.called[0] : null;
-    if (cur && cur !== lastCalledBall) {
+    var isNewCall = !!cur && cur !== lastCalledBall;
+    if (isNewCall) {
       lastCalledBall = cur;
       playVoice(String(cur), getLtr(cur) + ' ' + cur, 520 + (cur % 15) * 18);
     }
@@ -560,7 +585,7 @@ function renderState(d) {
     for (var row = 0; row < 15; row++) {
       for (var col = 0; col < 5; col++) {
         var num = col * 15 + (row + 1);
-        var cls = (num === cur) ? 'cal lat' : (calMap[num] ? 'cal' : '');
+        var cls = (num === cur) ? 'cal lat' + (isNewCall ? ' pop' : '') : (calMap[num] ? 'cal' : '');
         mh += '<div class="mn ' + cls + '">' + num + '</div>';
       }
     }
@@ -568,7 +593,7 @@ function renderState(d) {
 
     var cb = document.getElementById('curBall');
     if (cur) {
-      cb.className = 'ball b' + getLtr(cur);
+      cb.className = 'ball b' + getLtr(cur) + (isNewCall ? ' rolling' : '');
       cb.textContent = getLtr(cur) + '-' + cur;
     } else {
       cb.className = 'ball bW';
@@ -589,6 +614,7 @@ function renderState(d) {
         return '<div class="pcard ' + (wl ? 'win' : '') + '"><div class="ptop"><span>CARD #' + no + '</span><span>' + r.stake + ' ETB</span></div><div class="bhdr"><div class="ch cB">B</div><div class="ch cI">I</div><div class="ch cN">N</div><div class="ch cG">G</div><div class="ch cO">O</div></div><div class="pgrid">' + g.map(function(v) {
           var isF = v === 'FREE', isM = !isF && mk[v], isCU = !isF && !isM && calMap[v];
           var c = isF ? 'fr' : isM ? 'mk' : isCU ? 'cu' : '';
+          if (isCU && v === cur && isNewCall) c += ' pop';
           return '<div class="pc ' + c + '" onclick="tapManual(' + no + ',' + (isF ? "'FREE'" : v) + ')">' + v + '</div>';
         }).join('') + '</div></div>';
       }).join('');
