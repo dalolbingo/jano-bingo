@@ -403,9 +403,20 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
     <div id="hList"></div>
   </section>
 
-  <section id="tab-rank" class="tab">
-    <div class="shd"><span>🏆 ከፍተኛ አሸናፊዎች</span></div>
-    <div id="rList"></div>
+  <section id="tab-bonus" class="tab">
+    <div class="shd"><span>🎁 BONUS CENTER</span></div>
+    <div class="scard" style="overflow:hidden;text-align:center;padding:22px 16px;background:radial-gradient(circle at 50% 0%,rgba(245,158,11,.22),transparent 62%),var(--card);border:1px solid rgba(245,158,11,.35)">
+      <div style="font-size:42px;margin-bottom:8px">🎁</div>
+      <div style="font-size:12px;font-weight:900;letter-spacing:2px;color:var(--gold2)">WELCOME BONUS</div>
+      <div style="font-size:42px;line-height:1.15;font-weight:1000;color:var(--gold2);margin:8px 0">10 ETB</div>
+      <div style="font-size:13px;color:var(--mut);line-height:1.6">A one-time 10 ETB bonus for newly registered players.</div>
+      <div id="bonusStatus" style="display:inline-flex;align-items:center;gap:7px;margin-top:16px;padding:9px 14px;border-radius:99px;background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.35);color:#34d399;font-size:12px;font-weight:900">Checking bonus status...</div>
+    </div>
+    <div class="scard" style="padding:14px">
+      <div class="shd"><span>ℹ️ HOW IT WORKS</span></div>
+      <div style="font-size:13px;line-height:1.7;color:var(--mut)">Register your phone number with Jano Bingo to receive the 10 ETB welcome bonus. The bonus is credited to your wallet automatically and can be received once per player.</div>
+      <div id="bonusHint" style="font-size:12px;line-height:1.6;margin-top:10px;color:var(--gold2);font-weight:700"></div>
+    </div>
   </section>
 
   <section id="tab-profile" class="tab">
@@ -430,7 +441,7 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
     <button class="nbtn on" data-t="bingo" onclick="changeGame()"><span class="ni">🎮</span><span>Bingo</span></button>
     <button class="nbtn" data-t="wallet" onclick="goTab('wallet')"><span class="ni">👛</span><span>WALLET</span></button>
     <button class="nbtn" data-t="history" onclick="goTab('history')"><span class="ni">🕒</span><span>HISTORY</span></button>
-    <button class="nbtn" data-t="rank" onclick="goTab('rank')"><span class="ni">🏆</span><span>RANK</span></button>
+    <button class="nbtn" data-t="bonus" onclick="goTab('bonus')"><span class="ni">🎁</span><span>BONUS</span></button>
     <button class="nbtn" data-t="profile" onclick="goTab('profile')"><span class="ni">👤</span><span>PROFILE</span></button>
   </nav>
 </div>
@@ -617,6 +628,27 @@ function renderState(d) {
   document.getElementById('prPly').textContent = u.matches_played;
   document.getElementById('prWin').textContent = u.wins;
   document.getElementById('prSup').textContent = cfg.support;
+  var bonusStatus = document.getElementById('bonusStatus');
+  var bonusHint = document.getElementById('bonusHint');
+  if (u.welcome_bonus_claimed) {
+    bonusStatus.textContent = '✅ WELCOME BONUS CLAIMED';
+    bonusStatus.style.background = 'rgba(16,185,129,.14)';
+    bonusStatus.style.borderColor = 'rgba(16,185,129,.35)';
+    bonusStatus.style.color = '#34d399';
+    bonusHint.textContent = 'Your 10 ETB welcome bonus has already been credited to your wallet.';
+  } else if (u.phone && u.phone !== 'Not registered') {
+    bonusStatus.textContent = '🎁 BONUS NOT FOUND';
+    bonusStatus.style.background = 'rgba(245,158,11,.14)';
+    bonusStatus.style.borderColor = 'rgba(245,158,11,.35)';
+    bonusStatus.style.color = 'var(--gold2)';
+    bonusHint.textContent = 'No welcome bonus transaction is recorded for this account. Please contact support if you believe this is an error.';
+  } else {
+    bonusStatus.textContent = '📱 REGISTRATION REQUIRED';
+    bonusStatus.style.background = 'rgba(245,158,11,.14)';
+    bonusStatus.style.borderColor = 'rgba(245,158,11,.35)';
+    bonusStatus.style.color = 'var(--gold2)';
+    bonusHint.textContent = 'Share and verify your phone number in the Jano Bingo bot to receive your one-time 10 ETB welcome bonus.';
+  }
   document.getElementById('agName').textContent = cfg.telebirr_name;
   document.getElementById('agPhone').textContent = cfg.telebirr_phone;
 
@@ -787,15 +819,6 @@ function renderState(d) {
     }).join('');
   }
 
-  var rl = document.getElementById('rList');
-  if (!d.rank.length) {
-    rl.innerHTML = '<div class="scard" style="text-align:center;color:var(--mut)">ገና አሸናፊ አልተመዘገበም — የመጀመሪያው አሸናፊ ይሁኑ!</div>';
-  } else {
-    var md = ['🥇','🥈','🥉'];
-    rl.innerHTML = d.rank.map(function(x, i) {
-      return '<div class="rrow ' + (i === 0 ? 't1' : '') + '"><div class="hl"><div class="hico" style="font-weight:800">' + (i < 3 ? md[i] : (i + 1)) + '</div><div style="font-size:13.5px;font-weight:700">' + x.name + '</div></div><div class="c-gold" style="font-size:13.5px;font-weight:800">' + x.total_won.toFixed(2) + ' ETB</div></div>';
-    }).join('');
-  }
   stateLoaded = true;
   document.getElementById('loadStatus').style.display = 'none';
 }
