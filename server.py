@@ -503,6 +503,7 @@ def adm_kb():
   kb = IKB()
   kb.row(IBtn('📊 ሪፖርትና ትርፍ', callback_data='adm_stats'), IBtn('👥 ተጫዋቾች', callback_data='adm_users'))
   kb.row(IBtn('🔎 ተጫዋች መፈለጊያ', callback_data='adm_player_info'))
+  kb.row(IBtn('💸 Pending Payout Requests', callback_data='adm_pending_payouts'))
   kb.row(IBtn('➕ ብር ጨምር', callback_data='adm_add'), IBtn('➖ ብር ቀንስ', callback_data='adm_sub'))
   kb.row(IBtn(f'⚙️ ዝቅተኛ ተጫዋች: {MIN_PLAYERS}', callback_data='adm_minp'), IBtn('💾 DB Backup', callback_data='adm_backup'))
   kb.row(IBtn('📢 ለሁሉም መልዕክት ላክ', callback_data='adm_bcast'))
@@ -809,6 +810,36 @@ if bot:
       bot.send_message(call.message.chat.id, '\n'.join(f'• {r["name"]} | 📱 {r["phone"] or "Not registered"} | Balance:{r["play_wallet"]:.1f} ETB' for r in rows) or 'ምንም ተጫዋች የለም።')
     elif d == 'adm_player_info':
       bot.register_next_step_handler(bot.send_message(call.message.chat.id, '🔎 የተጫዋቹን የተመዘገበ ስልክ ቁጥር ያስገቡ፦'), s_adm_player_info)
+    elif d == 'adm_pending_payouts':
+      with get_db() as c:
+        payouts = c.execute("""
+          SELECT r.id,r.uid,r.amount,r.method,r.details,r.created_at,u.name,u.phone
+          FROM requests r LEFT JOIN users u ON u.uid=r.uid
+          WHERE r.req_type='withdraw' AND r.status='pending'
+          ORDER BY r.created_at ASC LIMIT 30
+        """).fetchall()
+      if not payouts:
+        bot.send_message(call.message.chat.id, '✅ ምንም በመጠባበቅ ላይ ያለ የወጪ ክፍያ ጥያቄ የለም።', reply_markup=adm_kb())
+      else:
+        bot.send_message(call.message.chat.id, f'💸 <b>PENDING PAYOUT REQUESTS</b> — {len(payouts)}', parse_mode='HTML')
+        for p in payouts:
+          stamp = time.strftime('%Y-%m-%d %H:%M', time.localtime(p['created_at'])) if p['created_at'] else 'Unknown'
+          details = (p['details'] or '').replace('<','&lt;').replace('>','&gt;').replace('&','&amp;')
+          phone = p['phone'] or 'Not registered'
+          name = p['name'] or 'Player'
+          msg = (
+            f'💸 <b>PAYOUT #{p["id"]}</b>\\n'
+            f'👤 {name}\\n'
+            f'📱 <code>{phone}</code>\\n'
+            f'💵 <b>{float(p["amount"] or 0):.2f} ETB</b>\\n'
+            f'🏦 {p["method"] or "Unknown"}\\n'
+            f'📄 {details}\\n'
+            f'🕒 {stamp}'
+          )
+          kb = IKB()
+          kb.row(IBtn('✅ Mark as paid', callback_data=f'ap_wd_{p["id"]}'),
+                 IBtn('❌ Reject & refund', callback_data=f'rj_wd_{p["id"]}'))
+          bot.send_message(call.message.chat.id, msg, parse_mode='HTML', reply_markup=kb)
     elif d in ('adm_add', 'adm_sub'):
       act = 'add' if d == 'adm_add' else 'sub'
       bot.register_next_step_handler(bot.send_message(call.message.chat.id, '📱 የተጫዋቹን የተመዘገበ ስልክ ቁጥር እና መጠን ይላኩ (ምሳሌ፦ `0912345678 100`)', parse_mode='Markdown'), s_adm_bal, act)
