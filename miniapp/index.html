@@ -650,18 +650,38 @@ function copyInviteLink() {
   var el = document.getElementById('inviteLink');
   var link = el ? el.textContent.trim() : '';
   if (!link || !link.startsWith('https://t.me/')) {
-    showToast('Invite link is not ready yet.');
+    toast('Invite link is not ready yet. Please wait for the page to load.');
     return;
   }
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(link).then(function(){ showToast('Invite link copied!'); }).catch(function(){ showToast('Could not copy link. Please copy it manually.'); });
-  } else {
-    var field = document.createElement('textarea');
-    field.value = link; field.style.position = 'fixed'; field.style.opacity = '0';
-    document.body.appendChild(field); field.select();
-    try { document.execCommand('copy'); showToast('Invite link copied!'); }
-    catch(e) { showToast('Could not copy link. Please copy it manually.'); }
-    document.body.removeChild(field);
+
+  // Telegram WebViews may not expose navigator.clipboard, so try the
+  // legacy selection-based copy first and fall back to a manual copy prompt.
+  var field = document.createElement('textarea');
+  field.value = link;
+  field.setAttribute('readonly', '');
+  field.style.position = 'fixed';
+  field.style.left = '-9999px';
+  field.style.top = '0';
+  document.body.appendChild(field);
+  field.focus();
+  field.select();
+  field.setSelectionRange(0, field.value.length);
+  var copied = false;
+  try { copied = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(field);
+
+  if (copied) {
+    toast('✅ Invite link copied! Share it with your friends.');
+    return;
+  }
+
+  // Some iOS/Telegram versions block programmatic clipboard access.
+  // Prompt selects the link so the player can copy it manually.
+  try {
+    window.prompt('Copy your Jano Bingo invite link:', link);
+    toast('Select and copy your invite link.');
+  } catch (e) {
+    toast('Please copy your invite link manually.');
   }
 }
 
