@@ -902,15 +902,29 @@ if bot:
       req = c.execute("SELECT req_type,COALESCE(SUM(amount),0) AS total FROM requests WHERE uid=? AND status IN ('approved','paid') GROUP BY req_type", (u['uid'],)).fetchall()
     req_totals = {r['req_type']: float(r['total'] or 0) for r in req}
     joined = time.strftime('%Y-%m-%d', time.localtime(u['created_at'])) if u['created_at'] else 'Unknown'
-    msg = (f"👤 PLAYER PROFILE\\n\\nName: {u['name']}\\n📱 Phone: {u['phone']}\\n🆔 Player ID: {u['uid']}\\n📅 Joined: {joined}\\n\\n"
-           f"💰 Balance: {float(u['play_wallet'] or 0):.2f} ETB\\n🏆 Wins: {int(u['wins'] or 0)}\\n❌ Losses: {losses}\\n🎮 Matches: {int(u['matches_played'] or 0)}\\n"
-           f"💵 Total winnings: {float(u['total_won'] or 0):.2f} ETB\\n📥 Approved deposits: {req_totals.get('deposit',0):.2f} ETB\\n📤 Paid withdrawals: {req_totals.get('withdraw',0):.2f} ETB")
+    msg = (
+      "👤 <b>PLAYER PROFILE</b>\n"
+      "━━━━━━━━━━━━━━━━━━\n"
+      f"👤 Name       : <b>{u['name']}</b>\n"
+      f"📱 Phone      : <code>{u['phone']}</code>\n"
+      f"🆔 Player ID  : <code>{u['phone']}</code>\n"
+      f"📅 Joined     : {joined}\n"
+      "━━━━━━━━━━━━━━━━━━\n"
+      f"💰 Balance    : <b>{float(u['play_wallet'] or 0):.2f} ETB</b>\n"
+      f"🏆 Wins       : {int(u['wins'] or 0)}\n"
+      f"❌ Losses     : {losses}\n"
+      f"🎮 Matches    : {int(u['matches_played'] or 0)}\n"
+      f"💵 Total won  : {float(u['total_won'] or 0):.2f} ETB\n"
+      f"📥 Deposits   : {req_totals.get('deposit',0):.2f} ETB\n"
+      f"📤 Withdrawals: {req_totals.get('withdraw',0):.2f} ETB\n"
+      "━━━━━━━━━━━━━━━━━━"
+    )
     if tx:
-      msg += '\\n\\n🧾 RECENT TRANSACTIONS'
+      msg += "\n🧾 <b>RECENT TRANSACTIONS</b>\n"
       for t in tx:
         stamp = time.strftime('%m-%d %H:%M', time.localtime(t['created_at'])) if t['created_at'] else ''
-        msg += f"\\n• {stamp} {t['icon'] or ''} {t['title']}: {float(t['amount'] or 0):+.2f} ETB"
-    bot.send_message(m.chat.id, msg)
+        msg += f"\n{stamp}  {t['icon'] or ''} {t['title']}  |  {float(t['amount'] or 0):+.2f} ETB"
+    bot.send_message(m.chat.id, msg, parse_mode='HTML')
 
   def s_adm_bal(m, act):
     if not is_adm(m.from_user.id): return
