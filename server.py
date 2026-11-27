@@ -1197,7 +1197,7 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
       (u['uid'],)
     ).fetchone()[0])
     invite_stats = c.execute(
-      "SELECT COUNT(*) FILTER (WHERE title='የግብዣ ሽልማት' AND amount=10) AS successful, COALESCE(SUM(amount) FILTER (WHERE title='የግብዣ ሽልማት' AND amount=10),0) AS earned FROM transactions WHERE uid=?",
+      "SELECT COUNT(*) FILTER (WHERE title='የግብዣ ሽልማት') AS successful, COALESCE(SUM(amount) FILTER (WHERE title='የግብዣ ሽልማት'),0) AS earned FROM transactions WHERE uid=?",
       (u['uid'],)
     ).fetchone()
     invite_pending_count = c.execute('SELECT COUNT(*) FROM users WHERE referred_by=?', (u['uid'],)).fetchone()[0]
