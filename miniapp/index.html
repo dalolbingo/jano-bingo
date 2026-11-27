@@ -461,7 +461,7 @@ if (tg) {
 
 var stake = 10, stakeSelected = false, soundOn = true, autoMark = true;
 var lastCalledBall = null, lastWinnerCard = null, manualMarks = {}, lastRoundPhase = null, roundFxTimer = null;
-var latestState = null, busy = false, tTmr = null, stateLoading = false, stateLoaded = false, refreshAfterLoad = false;
+var latestState = null, busy = false, tTmr = null, stateLoading = false, stateLoaded = false, refreshAfterLoad = false, statePollTimer = null;
 var pendingCardPreview = null;
 var voiceAudio = new Audio(), actx = null;
 
@@ -820,10 +820,13 @@ async function pollState() {
     }
   } finally {
     stateLoading = false;
+    var pollDelay = latestState && latestState.room && latestState.room.phase === 'PLAYING' ? 1000 : 5000;
     if (refreshAfterLoad) {
       refreshAfterLoad = false;
-      pollState();
+      pollDelay = 0;
     }
+    clearTimeout(statePollTimer);
+    statePollTimer = setTimeout(pollState, pollDelay);
   }
 }
 
@@ -1063,7 +1066,6 @@ function cpTxt(t, m) {
 }
 
 pollState();
-setInterval(pollState, 5000);
 setInterval(updateCountdownDisplay, 250);
 </script>
 </body>
