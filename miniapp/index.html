@@ -718,8 +718,12 @@ function tapManual(no, v) {
 async function sendDep() {
   var a = parseFloat(document.getElementById('depAmt').value);
   var tx = document.getElementById('depTx').value.trim();
+  var method = document.getElementById('depPayMethod').textContent.trim();
+  if (method !== 'TeleBirr' && method !== 'CBE Birr') {
+    return toast('❌ እባክዎ TeleBirr ወይም CBE Birr ይምረጡ።');
+  }
   try {
-    await apiReq('/api/deposit', 'POST', { amount: a, tx_id: tx });
+    await apiReq('/api/deposit', 'POST', { amount: a, tx_id: tx, method: method });
     document.getElementById('depAmt').value = '';
     document.getElementById('depTx').value = '';
     document.getElementById('depDrw').classList.remove('on');
