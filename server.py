@@ -912,9 +912,9 @@ if bot:
               add_tx(c, uid, '💰', f'ገቢ ጸድቋል ({rq["method"]})', amt)
               ref_user = c.execute('SELECT referred_by FROM users WHERE uid=?', (uid,)).fetchone()
               if ref_user and ref_user['referred_by']:
-                c.execute('UPDATE users SET play_wallet=play_wallet+15 WHERE uid=?', (ref_user['referred_by'],))
+                c.execute('UPDATE users SET play_wallet=play_wallet+10 WHERE uid=?', (ref_user['referred_by'],))
                 c.execute('UPDATE users SET referred_by=NULL WHERE uid=?', (uid,))
-                add_tx(c, ref_user['referred_by'], '🎁', 'የግብዣ ሽልማት', 15.0)
+                add_tx(c, ref_user['referred_by'], '🎁', 'የግብዣ ሽልማት', 10.0)
               outcome = 'deposit_approved'
             elif rt == 'dep':
               c.execute("UPDATE requests SET status='rejected' WHERE id=?", (rid,))
@@ -1076,7 +1076,7 @@ if bot:
   @bot.message_handler(func=lambda m: m.text == '👥 ግብዣ (Invite)')
   def c_inv(m):
     me = bot.get_me()
-    bot.send_message(m.chat.id, f'🎁 ለእያንዳንዱ ስኬታማ ግብዣ 15 ETB ይሸለሙ!\n🔗 https://t.me/{me.username}?start={m.from_user.id}')
+    bot.send_message(m.chat.id, f'🎁 ለእያንዳንዱ ስኬታማ ግብዣ 10 ETB ይሸለሙ!\n🔗 https://t.me/{me.username}?start={m.from_user.id}')
 
   @bot.message_handler(commands=['register'])
   @bot.message_handler(func=lambda m: m.text == '📝 ምዝገባ (Register)')
@@ -1196,8 +1196,17 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
       "SELECT EXISTS(SELECT 1 FROM transactions WHERE uid=? AND title='የአዲስ ምዝገባ ቦነስ' AND amount=10)",
       (u['uid'],)
     ).fetchone()[0])
+    invite_stats = c.execute(
+      "SELECT COUNT(*) FILTER (WHERE title='የግብዣ ሽልማት' AND amount=10) AS successful, COALESCE(SUM(amount) FILTER (WHERE title='የግብዣ ሽልማት' AND amount=10),0) AS earned FROM transactions WHERE uid=?",
+      (u['uid'],)
+    ).fetchone()
+    invite_pending_count = c.execute('SELECT COUNT(*) FROM users WHERE referred_by=?', (u['uid'],)).fetchone()[0]
   return {'user': {'phone': u.get('phone') or 'Not registered', 'name': u['name'], 'play_wallet': round(u['play_wallet'],2), 'matches_played': u['matches_played'], 'wins': u['wins'],
-                   'welcome_bonus_claimed': welcome_bonus_claimed},
+                   'welcome_bonus_claimed': welcome_bonus_claimed,
+                   'invite_link': f'https://t.me/jano_bingo_et_bot?start={u["uid"]}',
+                   'invite_success_count': int(invite_stats['successful'] or 0),
+                   'invite_earned': float(invite_stats['earned'] or 0),
+                   'invite_pending_count': int(invite_pending_count)},
           'config': {'telebirr_name': TB_NAME, 'telebirr_phone': TB_PHONE, 'support': SUPPORT}, 'room': snap, 'history': txs}
 
 @app.post('/api/preview_card')
