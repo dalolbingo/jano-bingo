@@ -821,7 +821,8 @@ async function buyCard(no) {
     try {
       var removed = await apiReq('/api/buy_card', 'POST', { stake: stake, card_no: no });
       if (removed.action === 'removed') toast('↩️ ካርድ #' + no + ' ተሰርዟል፤ ብሩ ተመላሽ ሆኗል።');
-      await pollState();
+      busy = false;
+      pollState(); // Refresh room details in the background; don't block the player's next action.
     } catch (e) { toast('❌ ' + e.message); }
     busy = false;
     return;
@@ -855,7 +856,9 @@ async function confirmCardPreview() {
     document.getElementById('cardConfirm').classList.remove('on');
     beep(720, 0.12);
     toast('✅ Card #' + p.card_no + ' confirmed and reserved!');
-    await pollState();
+    busy = false;
+    pollState(); // Update wallet and room asynchronously so confirmation feels instant.
+    return;
   } catch (e) { toast('❌ ' + e.message); }
   busy = false;
 }
