@@ -25,7 +25,7 @@ body.light{
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
 html,body{min-height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden}
-#appRoot{visibility:hidden}.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:74px;position:relative}
+#appRoot{visibility:visible}.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:74px;position:relative}
 .hdr{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--nav);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd)}
 .brand{display:flex;align-items:center;gap:9px}
 .badge{width:40px;height:40px;border-radius:11px;object-fit:cover;display:block;box-shadow:0 3px 14px rgba(245,158,11,.45);border:1px solid rgba(255,215,80,.65)}
@@ -149,10 +149,24 @@ body.light .status-banner{color:#1d4ed8}
 .toast{position:fixed;top:62px;left:50%;transform:translateX(-50%);z-index:100;background:#0f172a;color:#fff;border:1px solid var(--bdg);padding:9px 16px;border-radius:99px;font-size:12.5px;font-weight:700;display:none;max-width:90%;text-align:center}
 .toast.on{display:block}
 .auth-err{padding:40px 20px;text-align:center;line-height:1.7}
+#loadStatus{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(7,11,20,.92);color:#f8fafc;text-align:center}
+#loadStatus .load-card{width:100%;max-width:320px;padding:26px 22px;border:1px solid rgba(245,158,11,.45);border-radius:18px;background:#101727;box-shadow:0 12px 36px rgba(0,0,0,.35)}
+#loadStatus .load-spin{width:34px;height:34px;margin:0 auto 14px;border:3px solid rgba(245,158,11,.2);border-top-color:#fbbf24;border-radius:50%;animation:janoSpin .8s linear infinite}
+@keyframes janoSpin{to{transform:rotate(360deg)}}
+#loadRetry{display:none;margin-top:16px;padding:10px 20px;border:0;border-radius:99px;background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#241500;font-weight:800;font-size:14px}
 </style>
 </head>
 <body>
 <div id="toast" class="toast"></div>
+<div id="loadStatus" role="status" aria-live="polite">
+  <div class="load-card">
+    <div class="load-spin" id="loadSpinner"></div>
+    <div style="font-size:19px;font-weight:900;color:#fbbf24;margin-bottom:8px">Jano Bingo</div>
+    <div id="loadMessage" style="font-size:14px;font-weight:700">Connecting to the game...</div>
+    <div id="loadHint" style="font-size:12px;color:#94a3b8;margin-top:7px">Please wait a moment while the game loads.</div>
+    <button id="loadRetry" type="button" onclick="pollState()">Try again</button>
+  </div>
+</div>
 <div id="authGuard" class="auth-err" style="display:none">
   <div style="font-size:48px;margin-bottom:10px">👑</div>
   <h2 style="color:var(--gold2);margin-bottom:8px">Jano Bingo LIVE</h2>
@@ -353,7 +367,7 @@ if (tg) {
 
 var stake = 10, soundOn = true, autoMark = true;
 var lastCalledBall = null, lastWinnerCard = null, manualMarks = {};
-var latestState = null, busy = false, tTmr = null;
+var latestState = null, busy = false, tTmr = null, stateLoading = false, stateLoaded = false;
 var voiceAudio = new Audio(), actx = null;
 
 function ensureAudioUnlocked() {
@@ -626,19 +640,44 @@ function renderState(d) {
       return '<div class="rrow ' + (i === 0 ? 't1' : '') + '"><div class="hl"><div class="hico" style="font-weight:800">' + (i < 3 ? md[i] : (i + 1)) + '</div><div style="font-size:13.5px;font-weight:700">' + x.name + '</div></div><div class="c-gold" style="font-size:13.5px;font-weight:800">' + x.total_won.toFixed(2) + ' ETB</div></div>';
     }).join('');
   }
-  document.getElementById('appRoot').style.visibility = 'visible';
+  stateLoaded = true;
+  document.getElementById('loadStatus').style.display = 'none';
 }
 
 async function pollState() {
+  if (stateLoading) return;
   if (!initData) {
+    document.getElementById('loadStatus').style.display = 'none';
     document.getElementById('appRoot').style.display = 'none';
     document.getElementById('authGuard').style.display = 'block';
     return;
   }
+  stateLoading = true;
+  var status = document.getElementById('loadStatus');
+  var message = document.getElementById('loadMessage');
+  var hint = document.getElementById('loadHint');
+  var retry = document.getElementById('loadRetry');
+  var spinner = document.getElementById('loadSpinner');
+  if (!stateLoaded) {
+    status.style.display = 'flex';
+    message.textContent = 'Connecting to the game...';
+    hint.textContent = 'The first connection may take a little longer. Please wait.';
+    retry.style.display = 'none';
+    spinner.style.display = 'block';
+  }
   try {
     var data = await apiReq('/api/state?stake=' + stake);
     renderState(data);
-  } catch (e) {}
+  } catch (e) {
+    if (!stateLoaded) {
+      message.textContent = 'The game is taking longer to respond.';
+      hint.textContent = 'Please try again in a moment.';
+      spinner.style.display = 'none';
+      retry.style.display = 'inline-block';
+    }
+  } finally {
+    stateLoading = false;
+  }
 }
 
 async function buyCard(no) {
@@ -822,7 +861,7 @@ function cpTxt(t, m) {
 }
 
 pollState();
-setInterval(pollState, 1200);
+setInterval(pollState, 5000);
 </script>
 </body>
 </html>
