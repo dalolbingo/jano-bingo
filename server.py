@@ -922,7 +922,7 @@ if bot:
             elif rt == 'wd' and act == 'ap':
               # Only legacy requests that were debited at submission time skip this approval-time debit.
               already_debited = c.execute(
-                "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%' LIMIT 1",
+                "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%%' LIMIT 1",
                 (uid, -amt)
               ).fetchone()
               if not already_debited:
@@ -937,7 +937,7 @@ if bot:
             else:
               # Refund only old requests that were already debited before approval.
               already_debited = c.execute(
-                "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%' LIMIT 1",
+                "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%%' LIMIT 1",
                 (uid, -amt)
               ).fetchone()
               c.execute("UPDATE requests SET status='rejected' WHERE id=?", (rid,))
