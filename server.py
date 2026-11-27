@@ -889,58 +889,96 @@ if bot:
     elif d == 'adm_bcast':
       bot.register_next_step_handler(bot.send_message(call.message.chat.id, '📢 ለሁሉም የሚላከውን መልዕክት ይጻፉ፦'), s_bcast)
     elif d.startswith(('ap_', 'rj_')):
-      act, rt, rid = d.split('_')
-      with get_db() as c:
-        c.execute('BEGIN IMMEDIATE')
-        rq = c.execute('SELECT * FROM requests WHERE id=? FOR UPDATE', (int(rid),)).fetchone()
-        if not rq or rq['status'] != 'pending': return bot.send_message(call.message.chat.id, '⚠️ ቀድሞ ተወስኗል።')
-        uid, amt = rq['uid'], rq['amount']
-        if rt == 'dep' and act == 'ap':
-          c.execute("UPDATE requests SET status='approved' WHERE id=?", (int(rid),))
-          c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, uid))
-          add_tx(c, uid, '💰', f'ገቢ ጸድቋል ({rq["method"]})', amt)
-          u = c.execute('SELECT referred_by FROM users WHERE uid=?', (uid,)).fetchone()
-          if u and u['referred_by']:
-            c.execute('UPDATE users SET play_wallet=play_wallet+15 WHERE uid=?', (u['referred_by'],))
-            c.execute('UPDATE users SET referred_by=NULL WHERE uid=?', (uid,))
-            add_tx(c, u['referred_by'], '🎁', 'የግብዣ ሽልማት', 15.0)
-          bot.edit_message_text(call.message.text + f'\n\n✅ ጸድቋል (+{amt:.2f} ETB)', call.message.chat.id, call.message.message_id)
-          try: bot.send_message(uid, f'🎉 የ {amt:.2f} ETB ገቢዎ ጸድቋል!')
-          except Exception: pass
-        elif rt == 'dep':
-          c.execute("UPDATE requests SET status='rejected' WHERE id=?", (int(rid),))
-          bot.edit_message_text(call.message.text + '\n\n❌ ተሰርዟል', call.message.chat.id, call.message.message_id)
-          try: bot.send_message(uid, f'❌ የ {amt:.2f} ETB ገቢ ጥያቄዎ ተቀባይነት አላገኘም። እባክዎ አድሚንን ያነጋግሩ።')
-          except Exception: pass
-        elif rt == 'wd' and act == 'ap':
-          # Legacy pending requests may already have a debit transaction; avoid charging them twice.
-          already_debited = c.execute(
-            "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%' LIMIT 1",
-            (uid, -float(amt))
-          ).fetchone()
-          if not already_debited:
-            cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, uid, amt))
-            if cur.rowcount != 1:
-              bot.send_message(call.message.chat.id, '❌ የተጫዋቹ ባላንስ በቂ አይደለም። ጥያቄው በመጠባበቅ ላይ ይቆያል።')
-              return
-            add_tx(c, uid, '💸', f'የወጪ ክፍያ ጸድቋል ({rq["method"]})', -amt)
-          c.execute("UPDATE requests SET status='paid' WHERE id=?", (int(rid),))
-          bot.edit_message_text(call.message.text + f'\\n\\n✅ ተልኳል ({amt:.2f} ETB)', call.message.chat.id, call.message.message_id)
-          try: bot.send_message(uid, f'✅ የ {amt:.2f} ETB ወጪዎ ተልኳል።')
-          except Exception: pass
-        else:
-          # Refund only legacy pending requests that were debited when they were created.
-          already_debited = c.execute(
-            "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%' LIMIT 1",
-            (uid, -float(amt))
-          ).fetchone()
-          c.execute("UPDATE requests SET status='rejected' WHERE id=?", (int(rid),))
-          if already_debited:
-            c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, uid))
-            add_tx(c, uid, '↩️', 'ወጪ ተመልሷል', amt)
-          bot.edit_message_text(call.message.text + '\\n\\n❌ ተሰርዟል' + (' (old balance refunded)' if already_debited else ''), call.message.chat.id, call.message.message_id)
-          try: bot.send_message(uid, f'❌ የ {amt:.2f} ETB የወጪ ጥያቄዎ ተሰርዟል.' + (' የቀድሞ ተቀናሽ ገንዘብ ተመልሷል።' if already_debited else ''))
-          except Exception: pass
+      parts = d.split('_')
+      if len(parts) != 3 or parts[0] not in ('ap', 'rj') or parts[1] not in ('dep', 'wd') or not parts[2].isdigit():
+        return bot.answer_callback_query(call.id, 'Invalid payout action.', show_alert=True)
+      act, rt, rid = parts[0], parts[1], int(parts[2])
+      outcome = None
+      uid = None
+      amt = 0.0
+      try:
+        with get_db() as c:
+          c.execute('BEGIN IMMEDIATE')
+          rq = c.execute('SELECT * FROM requests WHERE id=? FOR UPDATE', (rid,)).fetchone()
+          if not rq:
+            outcome = 'missing'
+          elif rq['status'] != 'pending':
+            outcome = 'already'
+          else:
+            uid, amt = rq['uid'], float(rq['amount'] or 0)
+            if rt == 'dep' and act == 'ap':
+              c.execute("UPDATE requests SET status='approved' WHERE id=?", (rid,))
+              c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, uid))
+              add_tx(c, uid, '💰', f'ገቢ ጸድቋል ({rq["method"]})', amt)
+              ref_user = c.execute('SELECT referred_by FROM users WHERE uid=?', (uid,)).fetchone()
+              if ref_user and ref_user['referred_by']:
+                c.execute('UPDATE users SET play_wallet=play_wallet+15 WHERE uid=?', (ref_user['referred_by'],))
+                c.execute('UPDATE users SET referred_by=NULL WHERE uid=?', (uid,))
+                add_tx(c, ref_user['referred_by'], '🎁', 'የግብዣ ሽልማት', 15.0)
+              outcome = 'deposit_approved'
+            elif rt == 'dep':
+              c.execute("UPDATE requests SET status='rejected' WHERE id=?", (rid,))
+              outcome = 'deposit_rejected'
+            elif rt == 'wd' and act == 'ap':
+              # Only legacy requests that were debited at submission time skip this approval-time debit.
+              already_debited = c.execute(
+                "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%' LIMIT 1",
+                (uid, -amt)
+              ).fetchone()
+              if not already_debited:
+                cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, uid, amt))
+                if cur.rowcount != 1:
+                  outcome = 'insufficient'
+                else:
+                  add_tx(c, uid, '💸', f'የወጪ ክፍያ ጸድቋል ({rq["method"]})', -amt)
+              if outcome != 'insufficient':
+                c.execute("UPDATE requests SET status='paid' WHERE id=?", (rid,))
+                outcome = 'withdraw_paid'
+            else:
+              # Refund only old requests that were already debited before approval.
+              already_debited = c.execute(
+                "SELECT 1 FROM transactions WHERE uid=? AND amount=? AND title LIKE 'የወጪ ጥያቄ%' LIMIT 1",
+                (uid, -amt)
+              ).fetchone()
+              c.execute("UPDATE requests SET status='rejected' WHERE id=?", (rid,))
+              if already_debited:
+                c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, uid))
+                add_tx(c, uid, '↩️', 'ወጪ ተመልሷል', amt)
+              outcome = 'withdraw_rejected_refunded' if already_debited else 'withdraw_rejected'
+      except Exception as e:
+        print('Payout action database error:', type(e).__name__, str(e)[:300])
+        return bot.send_message(call.message.chat.id, '❌ Could not process this payout. It is still pending. Please try again.')
+      if outcome == 'missing':
+        return bot.send_message(call.message.chat.id, '⚠️ This payout request was not found.')
+      if outcome == 'already':
+        return bot.send_message(call.message.chat.id, '⚠️ This request has already been processed.')
+      if outcome == 'insufficient':
+        return bot.send_message(call.message.chat.id, '❌ Player balance is too low. The request remains pending; add funds or reject it.')
+      status_text = {
+        'deposit_approved': f'\n\n✅ Approved (+{amt:.2f} ETB)',
+        'deposit_rejected': '\n\n❌ Rejected',
+        'withdraw_paid': f'\n\n✅ Marked as paid ({amt:.2f} ETB)',
+        'withdraw_rejected_refunded': '\n\n❌ Rejected (previous deduction refunded)',
+        'withdraw_rejected': '\n\n❌ Rejected'
+      }.get(outcome, '\n\n✅ Processed')
+      try:
+        bot.edit_message_text((call.message.text or '') + status_text, call.message.chat.id, call.message.message_id, reply_markup=None)
+      except Exception as e:
+        print('Payout admin message update error:', type(e).__name__, str(e)[:200])
+        try: bot.send_message(call.message.chat.id, f'✅ Request #{rid} processed. The original message could not be updated.')
+        except Exception: pass
+      try:
+        if outcome == 'deposit_approved':
+          bot.send_message(uid, f'🎉 Your {amt:.2f} ETB deposit has been approved!')
+        elif outcome == 'deposit_rejected':
+          bot.send_message(uid, f'❌ Your {amt:.2f} ETB deposit request was rejected. Please contact admin.')
+        elif outcome == 'withdraw_paid':
+          bot.send_message(uid, f'✅ Your {amt:.2f} ETB withdrawal has been marked as paid.')
+        elif outcome.startswith('withdraw_rejected'):
+          extra = ' Your previous deduction has been refunded.' if outcome == 'withdraw_rejected_refunded' else ''
+          bot.send_message(uid, f'❌ Your {amt:.2f} ETB withdrawal request was rejected.{extra}')
+      except Exception as e:
+        print('Payout player notification error:', type(e).__name__, str(e)[:200])
 
   def s_adm_player_info(m):
     if not is_adm(m.from_user.id): return
@@ -1292,9 +1330,7 @@ async def api_wd(req: Request, x_tg_init_data: str = Header(default='')):
     c.execute('BEGIN IMMEDIATE')
     row = c.execute('SELECT play_wallet FROM users WHERE uid=?', (u['uid'],)).fetchone()
     if not row or row['play_wallet'] < amt: raise HTTPException(400, 'በቂ ባላንስ የለዎትም!')
-    cur = c.execute('UPDATE users SET play_wallet=play_wallet-? WHERE uid=? AND play_wallet>=?', (amt, u['uid'], amt))
-    if cur.rowcount != 1: raise HTTPException(409, 'ባላንሱ ተቀይሯል፤ እንደገና ይሞክሩ።')
-    add_tx(c, u['uid'], '💸', f'የወጪ ጥያቄ ({ph})', -amt)
+    # Reserve no funds while pending; the wallet is deducted only when admin approves.
     rid = c.execute('INSERT INTO requests (req_type,uid,amount,method,details,status,created_at) VALUES (?,?,?,?,?,?,?)',
                     ('withdraw', u['uid'], amt, method, f'App Phone: {ph}', 'pending', int(time.time()))).lastrowid
   try:
