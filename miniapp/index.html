@@ -105,6 +105,23 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
 .mcell{aspect-ratio:1;border-radius:3px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700}
 .mcell.fr{background:#2563eb;color:#fff}
 .playlay{display:grid;grid-template-columns:38% 1fr;gap:9px;align-items:start}
+.play-toolbar{display:flex;align-items:center;justify-content:space-between;gap:9px;margin:0 0 11px;padding:9px 10px;border:1px solid rgba(251,191,36,.2);border-radius:14px;background:linear-gradient(110deg,rgba(30,41,66,.96),rgba(16,23,39,.96));box-shadow:0 7px 20px rgba(0,0,0,.22)}
+.play-toolbar-label{font-size:10px;font-weight:900;letter-spacing:.7px;color:var(--mut)}
+.auto-toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid rgba(16,185,129,.4);border-radius:999px;background:rgba(16,185,129,.14);color:#6ee7b7;font-size:11px;font-weight:900;cursor:pointer;transition:transform .2s ease,background .25s ease,border-color .25s ease}
+.auto-toggle:active{transform:scale(.96)}
+.auto-toggle.off{background:rgba(148,163,184,.1);border-color:var(--bd);color:var(--mut)}
+.auto-toggle .auto-dot{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 9px #34d399}
+.auto-toggle.off .auto-dot{background:#94a3b8;box-shadow:none}
+#playView .sbox,#playView .mstr,#playView .cstage,#playView .pcard{transition:border-color .25s ease,box-shadow .25s ease,transform .25s ease}
+#playView .sbox{border-radius:15px;background:linear-gradient(145deg,var(--card),var(--card2))}
+#playView .mstr{border-radius:16px;padding:7px;box-shadow:0 8px 24px rgba(0,0,0,.24)}
+#playView .cstage{border-radius:18px;min-height:190px;background:radial-gradient(circle at 28% 22%,rgba(37,99,235,.13),transparent 52%),linear-gradient(145deg,var(--card),var(--card2))}
+#playView .pcard{border-radius:16px;padding:10px}
+#playView .pc{transition:background .2s ease,transform .2s ease,box-shadow .2s ease}
+#playView .pc:active{transform:scale(.92)}
+#playView .pc.mk{box-shadow:0 0 10px rgba(251,191,36,.28)}
+#playView .call-trail .trail-ball{transition:transform .25s ease}
+@media(max-width:370px){.play-toolbar{padding:8px}.play-toolbar-label{font-size:9px}.auto-toggle{padding:7px 9px;font-size:10px}.playlay{gap:7px}}
 .mstr{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:6px 5px;box-shadow:var(--sh)}
 .bhdr{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-bottom:4px}
 .ch{text-align:center;font-size:10px;font-weight:800;padding:3px 0;border-radius:5px;color:#fff}
@@ -297,6 +314,10 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
     </div>
 
     <div id="playView" style="display:none">
+      <div class="play-toolbar">
+        <span class="play-toolbar-label">LIVE GAME CONTROLS</span>
+        <button id="playAutoBtn" class="auto-toggle" type="button" onclick="toggleAuto()" aria-pressed="true"><span class="auto-dot"></span><span id="playAutoLabel">AUTO MARK ON</span></button>
+      </div>
       <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span id="playingStakePill" class="active-stake">10 ETB ROOM</span></div>
       <div id="roundFx" aria-hidden="true">🎱 GAME ON! 🎱</div>
       <div class="srow3">
@@ -979,8 +1000,17 @@ function toggleSound() {
 function toggleAuto() {
   autoMark = !autoMark;
   var b = document.getElementById('autoBtn');
-  b.textContent = autoMark ? '⚡ Auto-Mark: ON' : '✋ Manual Mark';
-  b.classList.toggle('off', !autoMark);
+  var p = document.getElementById('playAutoBtn');
+  var label = document.getElementById('playAutoLabel');
+  if (b) {
+    b.textContent = autoMark ? '⚡ Auto-Mark: ON' : '✋ Manual Mark';
+    b.classList.toggle('off', !autoMark);
+  }
+  if (p) {
+    p.classList.toggle('off', !autoMark);
+    p.setAttribute('aria-pressed', autoMark ? 'true' : 'false');
+  }
+  if (label) label.textContent = autoMark ? 'AUTO MARK ON' : 'MANUAL MARK';
   if (latestState) renderState(latestState);
 }
 function goTab(t) {
