@@ -887,15 +887,25 @@ if bot:
 
   def s_adm_player_info(m):
     if not is_adm(m.from_user.id): return
+    if (m.text or '').strip().lower() in ('/cancel', 'cancel', 'stop', '/admin'):
+      bot.send_message(m.chat.id, '✅ የተጫዋች ፍለጋ ተዘግቷል።', reply_markup=adm_kb())
+      return
     phone = ''.join(ch for ch in (m.text or '') if ch.isdigit())
     if len(phone) < 9:
-      return bot.reply_to(m, '❌ ትክክለኛ የስልክ ቁጥር ያስገቡ።')
+      bot.send_message(m.chat.id, '❌ ትክክለኛ የስልክ ቁጥር ያስገቡ።')
+      bot.send_message(m.chat.id, '📱 ሌላ ስልክ ቁጥር ይላኩ፤ ለመውጣት /cancel ይጻፉ።')
+      bot.register_next_step_handler_by_chat_id(m.chat.id, s_adm_player_info)
+      return
     last9 = phone[-9:]
     variants = list({phone, last9, '0' + last9, '251' + last9})
     with get_db() as c:
       rows = c.execute("SELECT * FROM users WHERE phone IS NOT NULL AND regexp_replace(phone, '[^0-9]', '', 'g') = ANY(?)", (variants,)).fetchall()
       if len(rows) != 1:
-        return bot.reply_to(m, '❌ ተጫዋቹ አልተገኘም። የተመዘገበውን ስልክ ቁጥር ያረጋግጡ።' if not rows else '⚠️ ከአንድ በላይ ተጫዋች ተገኝቷል። ሙሉ ስልክ ቁጥሩን ያስገቡ።')
+        error = '❌ ተጫዋቹ አልተገኘም። የተመዘገበውን ስልክ ቁጥር ያረጋግጡ።' if not rows else '⚠️ ከአንድ በላይ ተጫዋች ተገኝቷል። ሙሉ ስልክ ቁጥሩን ያስገቡ።'
+        bot.send_message(m.chat.id, error)
+        bot.send_message(m.chat.id, '📱 ሌላ ስልክ ቁጥር ይላኩ፤ ለመውጣት /cancel ይጻፉ።')
+        bot.register_next_step_handler_by_chat_id(m.chat.id, s_adm_player_info)
+        return
       u = rows[0]
       losses = max(0, int(u['matches_played'] or 0) - int(u['wins'] or 0))
       tx = c.execute('SELECT icon,title,amount,created_at FROM transactions WHERE uid=? ORDER BY created_at DESC LIMIT 10', (u['uid'],)).fetchall()
@@ -925,6 +935,8 @@ if bot:
         stamp = time.strftime('%m-%d %H:%M', time.localtime(t['created_at'])) if t['created_at'] else ''
         msg += f"\n{stamp}  {t['icon'] or ''} {t['title']}  |  {float(t['amount'] or 0):+.2f} ETB"
     bot.send_message(m.chat.id, msg, parse_mode='HTML')
+    bot.send_message(m.chat.id, '📱 ሌላ ስልክ ቁጥር ይላኩ፤ ለመውጣት /cancel ይጻፉ።')
+    bot.register_next_step_handler_by_chat_id(m.chat.id, s_adm_player_info)
 
   def s_adm_bal(m, act):
     if not is_adm(m.from_user.id): return
