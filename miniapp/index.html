@@ -118,7 +118,7 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
 .cbox{display:flex;flex-direction:column;align-items:center}
 .sttl{font-size:9.5px;font-weight:800;color:var(--mut);margin-bottom:6px}
 .ball{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;border:2.5px solid rgba(255,255,255,.55);box-shadow:inset -5px -7px 14px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.45);position:relative;isolation:isolate}
-.ball.rolling{animation:bingo-roll-in .85s cubic-bezier(.2,.8,.25,1) both}
+.ball.rolling{animation:bingo-roll-in .85s cubic-bezier(.2,.8,.25,1) both;will-change:transform,filter,opacity}
 .ball.rolling:after{content:'';position:absolute;inset:-7px;border:2px solid rgba(251,191,36,.8);border-radius:50%;animation:ball-ring .85s ease-out both;pointer-events:none}
 @keyframes bingo-roll-in{0%{transform:translateX(65px) translateY(-18px) rotate(-240deg) scale(.45);filter:blur(3px);opacity:.2}65%{transform:translateX(-5px) translateY(2px) rotate(25deg) scale(1.12);filter:blur(0);opacity:1}100%{transform:translate(0) rotate(0) scale(1)}}
 @keyframes ball-ring{0%{transform:scale(.72);opacity:.9}100%{transform:scale(1.45);opacity:0}}
@@ -137,6 +137,11 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
 .bG{background:radial-gradient(circle at 30% 28%,#fde047,#d97706 65%,#78350f)}
 .bO{background:radial-gradient(circle at 30% 28%,#c084fc,#7c3aed 65%,#4c1d95)}
 .bW{background:radial-gradient(circle at 30% 28%,#fbbf24,#d97706 70%,#78350f)}
+.call-progress{height:6px;background:var(--card2);border-radius:99px;overflow:hidden;margin:8px 0 10px;border:1px solid var(--bd)}
+.call-progress>div{height:100%;width:0;background:linear-gradient(90deg,#2563eb,#fbbf24);border-radius:99px;transition:width .45s ease;box-shadow:0 0 12px rgba(251,191,36,.55)}
+.call-trail{display:flex;align-items:center;gap:6px;overflow:hidden;margin:0 0 10px;padding:7px 8px;background:var(--card);border:1px solid var(--bd);border-radius:11px;min-height:38px}
+.call-trail .trail-label{font-size:9px;font-weight:900;color:var(--mut);white-space:nowrap;margin-right:2px}
+.call-trail .trail-ball{width:28px;height:28px;flex:0 0 28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:#fff;box-shadow:inset -2px -3px 5px #0005,0 2px 6px #0003;animation:number-pop .35s ease-out both}
 .pstack{display:flex;flex-direction:column;align-items:center;gap:5px}
 .pball{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#fff;border:1.5px solid rgba(255,255,255,.4)}
 .acards{display:flex;flex-direction:column;gap:9px;max-height:400px;overflow-y:auto}
@@ -296,8 +301,10 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
       <div class="srow3">
         <div class="sbox"><div class="slbl">DERASH</div><div id="pDer" class="sval c-gold">0</div></div>
         <div class="sbox"><div class="slbl">PLAYERS</div><div id="pPly" class="sval c-blue">0</div></div>
-        <div class="sbox"><div class="slbl">CALLS</div><div id="pCal" class="sval">0</div></div>
+        <div class="sbox"><div class="slbl">CALLS</div><div id="pCal" class="sval">0 / 75</div></div>
       </div>
+      <div class="call-progress"><div id="callProgressFill"></div></div>
+      <div id="callTrail" class="call-trail" aria-live="polite"></div>
       <div class="playlay">
         <div class="mstr">
           <div class="bhdr"><div class="ch cB">B</div><div class="ch cI">I</div><div class="ch cN">N</div><div class="ch cG">G</div><div class="ch cO">O</div></div>
@@ -414,6 +421,22 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
   </nav>
 </div>
 
+<div id="cardConfirm" class="wov" style="z-index:40">
+  <div class="wcard" style="max-width:360px">
+    <div class="wttl">🎴 REVIEW YOUR CARD</div>
+    <div id="previewCardTitle" class="wnm">CARD #—</div>
+    <div class="wbox">
+      <div class="bhdr"><div class="ch cB">B</div><div class="ch cI">I</div><div class="ch cN">N</div><div class="ch cG">G</div><div class="ch cO">O</div></div>
+      <div id="previewCardGrid" class="wgrd"></div>
+    </div>
+    <div id="previewCardCost" style="color:#fbbf24;font-weight:900;margin:12px 0">— ETB</div>
+    <div style="font-size:12px;color:#cbd5e1;margin-bottom:14px">Please check the numbers. Your wallet will only be charged after you confirm.</div>
+    <div style="display:flex;gap:10px">
+      <button class="btnw" style="flex:1" onclick="cancelCardPreview()">CANCEL</button>
+      <button class="btnd" style="flex:1" onclick="confirmCardPreview()">✔ CONFIRM</button>
+    </div>
+  </div>
+</div>
 <div id="winOv" class="wov">
   <div class="wcard">
     <div id="wttl" class="wttl">🏆 Bingo! 🏆</div>
@@ -438,6 +461,7 @@ if (tg) {
 var stake = 10, stakeSelected = false, soundOn = true, autoMark = true;
 var lastCalledBall = null, lastWinnerCard = null, manualMarks = {}, lastRoundPhase = null, roundFxTimer = null;
 var latestState = null, busy = false, tTmr = null, stateLoading = false, stateLoaded = false, refreshAfterLoad = false;
+var pendingCardPreview = null;
 var voiceAudio = new Audio(), actx = null;
 
 function ensureAudioUnlocked() {
@@ -641,7 +665,9 @@ function renderState(d) {
     document.getElementById('playView').style.display = 'block';
     document.getElementById('pDer').textContent = r.derash;
     document.getElementById('pPly').textContent = r.players;
-    document.getElementById('pCal').textContent = r.called.length;
+    document.getElementById('pCal').textContent = r.called.length + ' / 75';
+    document.getElementById('callProgressFill').style.width = (r.called.length / 75 * 100) + '%';
+    document.getElementById('callTrail').innerHTML = '<span class="trail-label">RECENT</span>' + r.called.slice(0,5).map(function(n){ return '<span class="trail-ball b' + getLtr(n) + '">' + getLtr(n) + n + '</span>'; }).join('');
 
     var calMap = {};
     r.called.forEach(function(n) { calMap[n] = true; });
@@ -664,13 +690,18 @@ function renderState(d) {
 
     var cb = document.getElementById('curBall');
     if (cur) {
-      cb.className = 'ball b' + getLtr(cur) + (isNewCall ? ' rolling' : '');
+      cb.className = 'ball b' + getLtr(cur);
       cb.textContent = getLtr(cur) + '-' + cur;
+      if (isNewCall) {
+        cb.classList.remove('rolling');
+        void cb.offsetWidth;
+        cb.classList.add('rolling');
+      }
     } else {
       cb.className = 'ball bW';
       cb.textContent = '--';
     }
-    document.getElementById('prvBalls').innerHTML = r.called.slice(1, 4).map(function(p) {
+    document.getElementById('prvBalls').innerHTML = r.called.slice(1, 6).map(function(p) {
       return '<div class="pball b' + getLtr(p) + '">' + getLtr(p) + '-' + p + '</div>';
     }).join('');
 
@@ -783,12 +814,46 @@ async function pollState() {
 
 async function buyCard(no) {
   if (busy) return;
+  if (latestState && latestState.room.my_cards.indexOf(Number(no)) !== -1) {
+    if (!confirm('Remove card #' + no + ' and refund ' + stake + ' ETB?')) return;
+    busy = true;
+    try {
+      var removed = await apiReq('/api/buy_card', 'POST', { stake: stake, card_no: no });
+      if (removed.action === 'removed') toast('↩️ ካርድ #' + no + ' ተሰርዟል፤ ብሩ ተመላሽ ሆኗል።');
+      await pollState();
+    } catch (e) { toast('❌ ' + e.message); }
+    busy = false;
+    return;
+  }
   busy = true;
   ensureAudioUnlocked();
   try {
-    var res = await apiReq('/api/buy_card', 'POST', { stake: stake, card_no: no });
-    beep(res.action === 'bought' ? 680 : 400, 0.08);
-    toast(res.action === 'bought' ? '✅ ካርድ #' + no + ' ተገዝቷል!' : '↩️ ካርድ #' + no + ' ተሰርዟል፤ ብሩ ተመልሷል።');
+    var p = await apiReq('/api/preview_card', 'POST', { stake: stake, card_no: no });
+    pendingCardPreview = { stake: stake, card_no: no, token: p.preview_token };
+    document.getElementById('previewCardTitle').textContent = 'CARD #' + no;
+    document.getElementById('previewCardCost').textContent = stake + ' ETB · Confirm to reserve';
+    document.getElementById('previewCardGrid').innerHTML = p.grid.map(function(v){
+      return '<div class="wc ' + (v === 'FREE' ? 'cal' : '') + '">' + (v === 'FREE' ? 'FREE' : v) + '</div>';
+    }).join('');
+    document.getElementById('cardConfirm').classList.add('on');
+  } catch (e) { toast('❌ ' + e.message); }
+  busy = false;
+}
+function cancelCardPreview() {
+  pendingCardPreview = null;
+  document.getElementById('cardConfirm').classList.remove('on');
+  toast('Card selection cancelled. No money was taken.');
+}
+async function confirmCardPreview() {
+  if (busy || !pendingCardPreview) return;
+  busy = true;
+  var p = pendingCardPreview;
+  try {
+    var res = await apiReq('/api/buy_card', 'POST', { stake: p.stake, card_no: p.card_no, preview_token: p.token });
+    pendingCardPreview = null;
+    document.getElementById('cardConfirm').classList.remove('on');
+    beep(720, 0.12);
+    toast('✅ Card #' + p.card_no + ' confirmed and reserved!');
     await pollState();
   } catch (e) { toast('❌ ' + e.message); }
   busy = false;
