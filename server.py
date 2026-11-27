@@ -22,7 +22,7 @@ SUPPORT = '@janobingosupport1'
 TB_NAME = os.environ.get('TELEBIRR_NAME', 'SINSHAW JEMANEH ESHETE')
 TB_PHONE = os.environ.get('TELEBIRR_PHONE', '0941882333')
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip().strip("'\"")
-HOUSE_CUT, CD_SEC, CALL_SEC, WIN_SEC = 0.20, 60, 3.0, 10
+HOUSE_CUT, CD_SEC, CALL_SEC, WIN_SEC = 0.20, 40, 3.0, 10
 MIN_PLAYERS = int(os.environ.get('MIN_PLAYERS', '2') or '2')
 db_lock, room_lock = threading.RLock(), threading.RLock()
 
@@ -160,6 +160,8 @@ WIN_LINES = [[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22
 check_win = lambda g, cs: next((ln for ln in WIN_LINES if all(g[i] == 'FREE' or g[i] in cs for i in ln)), None)
 mk_room = lambda s: {'stake': s, 'phase': 'WAITING', 'countdown': CD_SEC, 'cards': {}, 'called': [], 'deck': [], 'tick': time.time(), 'winner': None, 'win_until': 0.0, 'last_bot_count': 0, 'bot_queue': [], 'bot_start_at': None, 'bot_index': 0}
 rooms = {10: mk_room(10), 20: mk_room(20), 50: mk_room(50)}
+# Short-lived card previews are not reservations and never deduct wallet funds.
+pending_previews = {}
 BOT_NAMES = ['Abel','Hana','Dawit','Selam','Meron','Natnael','Liya','Bereket','Rahel','Yonatan','Eden','Sami','Tigist','Mikiyas','Meseret','Amanuel','Hirut','Fitsum','Biniam','Martha','Robel','Saron','Henok','Bethlehem','Yared']
 def seed_bots(r):
   rng = random.SystemRandom()
@@ -167,7 +169,7 @@ def seed_bots(r):
   bot_count = rng.choice(counts)
   r['last_bot_count'] = bot_count
   # Bots are queued, not preloaded. Each gets a unique random second in the 55-second selection window.
-  offsets = sorted(rng.sample(range(1, 56), bot_count))
+  offsets = sorted(rng.sample(range(1, 37), bot_count))
   names = rng.sample(BOT_NAMES, bot_count)
   r['bot_queue'] = [{'name': name, 'at': offset} for name, offset in zip(names, offsets)]
   # Begin the staggered bot selection immediately when this round is seeded.
@@ -1047,6 +1049,28 @@ def api_state(stake: int = 10, x_tg_init_data: str = Header(default='')):
   return {'user': {'phone': u.get('phone') or 'Not registered', 'name': u['name'], 'play_wallet': round(u['play_wallet'],2), 'matches_played': u['matches_played'], 'wins': u['wins']},
           'config': {'telebirr_name': TB_NAME, 'telebirr_phone': TB_PHONE, 'support': SUPPORT}, 'room': snap, 'history': txs, 'rank': top}
 
+@app.post('/api/preview_card')
+async def api_preview_card(req: Request, x_tg_init_data: str = Header(default='')):
+  u, b = auth_user(x_tg_init_data), await req.json()
+  try: st, cno = int(b.get('stake', 10)), int(b.get('card_no', 0))
+  except (TypeError, ValueError): raise HTTPException(400, 'ልክ ያልሆነ ካርድ!')
+  if st not in rooms or not (1 <= cno <= 400): raise HTTPException(400, 'ልክ ያልሆነ ካርድ!')
+  with room_lock:
+    r = rooms[st]
+    if r['phase'] not in ('WAITING', 'COUNTDOWN'): raise HTTPException(400, 'ጨዋታው ተጀምሯል!')
+    if cno in r['cards']: raise HTTPException(400, f'ካርድ #{cno} ተይዟል!')
+    if sum(1 for v in r['cards'].values() if v['uid'] == u['uid']) >= 4: raise HTTPException(400, 'እስከ 4 ካርድ ብቻ!')
+    with get_db() as c:
+      wallet = c.execute('SELECT play_wallet FROM users WHERE uid=?', (u['uid'],)).fetchone()
+    if not wallet or wallet['play_wallet'] < st: raise HTTPException(400, 'በቂ ባላንስ የለዎትም! ገቢ ያድርጉ።')
+    now = time.time()
+    for token in [k for k,v in pending_previews.items() if v['expires'] < now]:
+      pending_previews.pop(token, None)
+    token = secrets.token_urlsafe(24)
+    grid = gen_card(cno)
+    pending_previews[token] = {'uid':u['uid'],'stake':st,'card_no':cno,'grid':grid,'expires':now+180}
+    return {'ok':True,'preview_token':token,'grid':grid,'stake':st,'card_no':cno}
+
 @app.post('/api/buy_card')
 async def api_buy(req: Request, x_tg_init_data: str = Header(default='')):
   u, b = auth_user(x_tg_init_data), await req.json()
@@ -1067,7 +1091,11 @@ async def api_buy(req: Request, x_tg_init_data: str = Header(default='')):
         return {'ok': True, 'action': 'removed'}
       raise HTTPException(400, f'ካርድ #{cno} ተይዟል!')
     if sum(1 for v in r['cards'].values() if v['uid'] == u['uid']) >= 4: raise HTTPException(400, 'እስከ 4 ካርድ ብቻ!')
-    grid = gen_card(cno)
+    token = str(b.get('preview_token') or '')
+    preview = pending_previews.get(token)
+    if not preview or preview['expires'] < time.time() or preview['uid'] != u['uid'] or preview['stake'] != st or preview['card_no'] != cno:
+      raise HTTPException(400, 'እባክዎ ካርዱን እንደገና ይምረጡና ያረጋግጡ።')
+    grid = preview['grid']
     with get_db() as c:
       c.execute('BEGIN IMMEDIATE')
       wallet = c.execute('SELECT play_wallet FROM users WHERE uid=?', (u['uid'],)).fetchone()
@@ -1077,6 +1105,7 @@ async def api_buy(req: Request, x_tg_init_data: str = Header(default='')):
       c.execute('INSERT INTO room_cards (stake,card_no,uid,name,grid) VALUES (?,?,?,?,?)',
                 (st, cno, u['uid'], u['name'], json.dumps(grid)))
     r['cards'][cno] = {'uid': u['uid'], 'name': u['name'], 'grid': grid}
+    pending_previews.pop(token, None)
     return {'ok': True, 'action': 'bought'}
 
 @app.post('/api/claim_bingo')
