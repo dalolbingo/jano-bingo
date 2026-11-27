@@ -564,10 +564,20 @@ def addis_voice_sample():
 
 if bot:
 
-  @bot.message_handler(content_types=['photo'])
-  def c_set_welcome_photo(m):
+  @bot.message_handler(commands=['setwelcome'])
+  def c_set_welcome_prompt(m):
     if not is_adm(m.from_user.id):
       return
+    prompt = bot.reply_to(m, '🖼 Send the new welcome image now. This will only change the /start welcome image. Use /cancel to stop.')
+    bot.register_next_step_handler(prompt, c_save_welcome_photo)
+
+  def c_save_welcome_photo(m):
+    if not is_adm(m.from_user.id):
+      return
+    if m.text and m.text.strip() == '/cancel':
+      return bot.reply_to(m, '❎ Welcome image update cancelled.')
+    if m.content_type != 'photo':
+      return bot.reply_to(m, '❌ Please send an image/photo, or use /setwelcome to try again.')
     try:
       file_info = bot.get_file(m.photo[-1].file_id)
       image_bytes = bot.download_file(file_info.file_path)
