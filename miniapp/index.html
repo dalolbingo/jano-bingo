@@ -49,6 +49,16 @@ body.light .wchip{color:#b45309}
 .status-banner.counting{background:rgba(245,158,11,.16);border-color:var(--bdg);color:var(--gold2)}
 body.light .status-banner{color:#1d4ed8}
 .sbar{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:6px 8px}
+.game-select{padding:18px 12px 24px;text-align:center}
+.game-select-title{font-size:23px;font-weight:1000;color:var(--gold2);margin:8px 0 6px}
+.game-select-sub{font-size:12px;color:var(--mut);margin-bottom:20px}
+.stake-options{display:grid;grid-template-columns:1fr;gap:12px}
+.stake-option{width:100%;padding:18px 16px;border:1px solid var(--bdg);border-radius:16px;background:linear-gradient(135deg,var(--card),var(--card2));color:var(--txt);display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:var(--sh);text-align:left}
+.stake-option:active{transform:scale(.985)}
+.stake-option .stake-amount{font-size:25px;font-weight:1000;color:var(--gold2)}
+.stake-option .stake-caption{font-size:11px;color:var(--mut);margin-top:3px}
+.stake-option .stake-arrow{font-size:24px;color:var(--gold2)}
+.active-stake{font-size:12px;font-weight:900;color:var(--gold2);padding:5px 9px;border:1px solid var(--bdg);border-radius:8px}
 .spills{display:flex;gap:5px}
 .spill{padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--mut);font-size:11px;font-weight:700;cursor:pointer}
 .spill.on{background:var(--ggrad);color:#090d16;border-color:transparent}
@@ -195,13 +205,24 @@ body.light .status-banner{color:#1d4ed8}
       </div>
     </div>
     <div class="hact">
+      <button id="gameBtn" class="ibtn" style="display:none" onclick="changeGame()" title="Change game">🎯</button>
       <button id="sndBtn" class="ibtn" onclick="toggleSound()">🔊</button>
       <div class="wchip" onclick="goTab('wallet')"><span class="coin">ብር</span><span id="hBal">0.00</span></div>
     </div>
   </header>
 
   <section id="tab-bingo" class="tab on">
-    <div id="lobbyView">
+    <div id="gameSelectView" class="game-select">
+      <div style="font-size:48px;margin-bottom:4px">🎱</div>
+      <div class="game-select-title">Choose Your Game</div>
+      <div class="game-select-sub">Select the amount you want to play. You will join only that stake room.</div>
+      <div class="stake-options">
+        <button class="stake-option" onclick="setStake(10)"><div><div class="stake-amount">10 ETB</div><div class="stake-caption">10 Birr game room</div></div><span class="stake-arrow">›</span></button>
+        <button class="stake-option" onclick="setStake(20)"><div><div class="stake-amount">20 ETB</div><div class="stake-caption">20 Birr game room</div></div><span class="stake-arrow">›</span></button>
+        <button class="stake-option" onclick="setStake(50)"><div><div class="stake-amount">50 ETB</div><div class="stake-caption">50 Birr game room</div></div><span class="stake-arrow">›</span></button>
+      </div>
+    </div>
+    <div id="lobbyView" style="display:none">
       <div class="srow4">
         <div class="sbox"><div class="slbl">WALLET</div><div id="lWal" class="sval c-em">0.00</div></div>
         <div class="sbox"><div class="slbl">DERASH</div><div id="lDer" class="sval c-gold">0</div></div>
@@ -212,11 +233,7 @@ body.light .status-banner{color:#1d4ed8}
       <div id="statusBanner" class="status-banner">⏳ እውነተኛ ተጫዋቾች በመጠበቅ ላይ... (ቢያንስ 2 ሰው ሲገባ ይጀምራል)</div>
 
       <div class="sbar">
-        <div class="spills">
-          <button class="spill on" data-s="10" onclick="setStake(10)">10 ብር</button>
-          <button class="spill" data-s="20" onclick="setStake(20)">20 ብር</button>
-          <button class="spill" data-s="50" onclick="setStake(50)">50 ብር</button>
-        </div>
+        <span id="activeStakePill" class="active-stake">10 ETB ROOM</span>
         <button id="autoBtn" class="apill" onclick="toggleAuto()">⚡ Auto-Mark: ON</button>
       </div>
 
@@ -236,6 +253,7 @@ body.light .status-banner{color:#1d4ed8}
     </div>
 
     <div id="playView" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span id="playingStakePill" class="active-stake">10 ETB ROOM</span></div>
       <div id="roundFx" aria-hidden="true">🎱 GAME ON! 🎱</div>
       <div class="srow3">
         <div class="sbox"><div class="slbl">DERASH</div><div id="pDer" class="sval c-gold">0</div></div>
@@ -379,7 +397,7 @@ if (tg) {
   try { tg.ready(); tg.expand(); initData = tg.initData || ''; } catch (e) {}
 }
 
-var stake = 10, soundOn = true, autoMark = true;
+var stake = 10, stakeSelected = false, soundOn = true, autoMark = true;
 var lastCalledBall = null, lastWinnerCard = null, manualMarks = {}, lastRoundPhase = null, roundFxTimer = null;
 var latestState = null, busy = false, tTmr = null, stateLoading = false, stateLoaded = false;
 var voiceAudio = new Audio(), actx = null;
@@ -511,7 +529,17 @@ function renderState(d) {
   document.getElementById('agName').textContent = cfg.telebirr_name;
   document.getElementById('agPhone').textContent = cfg.telebirr_phone;
 
-  if (r.phase === 'WAITING' || r.phase === 'COUNTDOWN') {
+  if (!stakeSelected) {
+    document.getElementById('gameSelectView').style.display = 'block';
+    document.getElementById('lobbyView').style.display = 'none';
+    document.getElementById('playView').style.display = 'none';
+    document.getElementById('winOv').classList.remove('on');
+    document.getElementById('gameBtn').style.display = 'none';
+  } else if (r.phase === 'WAITING' || r.phase === 'COUNTDOWN') {
+    document.getElementById('gameSelectView').style.display = 'none';
+    document.getElementById('gameBtn').style.display = 'inline-block';
+    document.getElementById('activeStakePill').textContent = stake + ' ETB ROOM';
+    document.getElementById('playingStakePill').textContent = stake + ' ETB ROOM';
     lastRoundPhase = r.phase;
     document.getElementById('winOv').classList.remove('on');
     document.getElementById('playView').style.display = 'none';
@@ -557,6 +585,9 @@ function renderState(d) {
       }).join('');
     }
   } else if (r.phase === 'PLAYING' || r.phase === 'WINNER') {
+    document.getElementById('gameSelectView').style.display = 'none';
+    document.getElementById('gameBtn').style.display = 'inline-block';
+    document.getElementById('playingStakePill').textContent = stake + ' ETB ROOM';
     if (r.phase === 'PLAYING' && lastRoundPhase !== 'PLAYING' && lastRoundPhase !== 'WINNER') {
       var fx = document.getElementById('roundFx');
       fx.classList.remove('show');
@@ -787,9 +818,25 @@ async function sendTransfer() {
 }
 
 function setStake(s) {
-  stake = s;
-  document.querySelectorAll('.spill').forEach(function(b) { b.classList.toggle('on', Number(b.getAttribute('data-s')) === s); });
+  if ([10,20,50].indexOf(Number(s)) === -1) return;
+  stake = Number(s);
+  stakeSelected = true;
+  lastCalledBall = null;
+  lastWinnerCard = null;
+  manualMarks = {};
+  document.getElementById('gameSelectView').style.display = 'none';
+  document.getElementById('gameBtn').style.display = 'inline-block';
+  document.getElementById('activeStakePill').textContent = stake + ' ETB ROOM';
+  document.getElementById('playingStakePill').textContent = stake + ' ETB ROOM';
   pollState();
+}
+function changeGame() {
+  stakeSelected = false;
+  lastCalledBall = null;
+  lastWinnerCard = null;
+  manualMarks = {};
+  document.getElementById('winOv').classList.remove('on');
+  goTab('bingo');
 }
 function toggleSound() {
   soundOn = !soundOn;
