@@ -502,6 +502,7 @@ def play_kb(lbl='🎲 Play Jano Bingo'):
 def adm_kb():
   kb = IKB()
   kb.row(IBtn('📊 ሪፖርትና ትርፍ', callback_data='adm_stats'), IBtn('👥 ተጫዋቾች', callback_data='adm_users'))
+  kb.row(IBtn('🔎 ተጫዋች መፈለጊያ', callback_data='adm_player_info'))
   kb.row(IBtn('➕ ብር ጨምር', callback_data='adm_add'), IBtn('➖ ብር ቀንስ', callback_data='adm_sub'))
   kb.row(IBtn(f'⚙️ ዝቅተኛ ተጫዋች: {MIN_PLAYERS}', callback_data='adm_minp'), IBtn('💾 DB Backup', callback_data='adm_backup'))
   kb.row(IBtn('📢 ለሁሉም መልዕክት ላክ', callback_data='adm_bcast'))
@@ -806,6 +807,8 @@ if bot:
     elif d == 'adm_users':
       with get_db() as c: rows = c.execute('SELECT * FROM users ORDER BY created_at DESC LIMIT 20').fetchall()
       bot.send_message(call.message.chat.id, '\n'.join(f'• {r["name"]} | 📱 {r["phone"] or "Not registered"} | Balance:{r["play_wallet"]:.1f} ETB' for r in rows) or 'ምንም ተጫዋች የለም።')
+    elif d == 'adm_player_info':
+      bot.register_next_step_handler(bot.send_message(call.message.chat.id, '🔎 የተጫዋቹን የተመዘገበ ስልክ ቁጥር ያስገቡ፦'), s_adm_player_info)
     elif d in ('adm_add', 'adm_sub'):
       act = 'add' if d == 'adm_add' else 'sub'
       bot.register_next_step_handler(bot.send_message(call.message.chat.id, '📱 የተጫዋቹን የተመዘገበ ስልክ ቁጥር እና መጠን ይላኩ (ምሳሌ፦ `0912345678 100`)', parse_mode='Markdown'), s_adm_bal, act)
@@ -881,6 +884,33 @@ if bot:
           c.execute('UPDATE users SET play_wallet=play_wallet+? WHERE uid=?', (amt, uid))
           add_tx(c, uid, '↩️', 'ወጪ ተመልሷል', amt)
           bot.edit_message_text(call.message.text + '\n\n❌ ተሰርዞ ተመልሷል', call.message.chat.id, call.message.message_id)
+
+  def s_adm_player_info(m):
+    if not is_adm(m.from_user.id): return
+    phone = ''.join(ch for ch in (m.text or '') if ch.isdigit())
+    if len(phone) < 9:
+      return bot.reply_to(m, '❌ ትክክለኛ የስልክ ቁጥር ያስገቡ።')
+    last9 = phone[-9:]
+    variants = list({phone, last9, '0' + last9, '251' + last9})
+    with get_db() as c:
+      rows = c.execute("SELECT * FROM users WHERE phone IS NOT NULL AND regexp_replace(phone, '[^0-9]', '', 'g') = ANY(?)", (variants,)).fetchall()
+      if len(rows) != 1:
+        return bot.reply_to(m, '❌ ተጫዋቹ አልተገኘም። የተመዘገበውን ስልክ ቁጥር ያረጋግጡ።' if not rows else '⚠️ ከአንድ በላይ ተጫዋች ተገኝቷል። ሙሉ ስልክ ቁጥሩን ያስገቡ።')
+      u = rows[0]
+      losses = max(0, int(u['matches_played'] or 0) - int(u['wins'] or 0))
+      tx = c.execute('SELECT icon,title,amount,created_at FROM transactions WHERE uid=? ORDER BY created_at DESC LIMIT 10', (u['uid'],)).fetchall()
+      req = c.execute("SELECT req_type,COALESCE(SUM(amount),0) AS total FROM requests WHERE uid=? AND status IN ('approved','paid') GROUP BY req_type", (u['uid'],)).fetchall()
+    req_totals = {r['req_type']: float(r['total'] or 0) for r in req}
+    joined = time.strftime('%Y-%m-%d', time.localtime(u['created_at'])) if u['created_at'] else 'Unknown'
+    msg = (f"👤 PLAYER PROFILE\\n\\nName: {u['name']}\\n📱 Phone: {u['phone']}\\n🆔 Player ID: {u['uid']}\\n📅 Joined: {joined}\\n\\n"
+           f"💰 Balance: {float(u['play_wallet'] or 0):.2f} ETB\\n🏆 Wins: {int(u['wins'] or 0)}\\n❌ Losses: {losses}\\n🎮 Matches: {int(u['matches_played'] or 0)}\\n"
+           f"💵 Total winnings: {float(u['total_won'] or 0):.2f} ETB\\n📥 Approved deposits: {req_totals.get('deposit',0):.2f} ETB\\n📤 Paid withdrawals: {req_totals.get('withdraw',0):.2f} ETB")
+    if tx:
+      msg += '\\n\\n🧾 RECENT TRANSACTIONS'
+      for t in tx:
+        stamp = time.strftime('%m-%d %H:%M', time.localtime(t['created_at'])) if t['created_at'] else ''
+        msg += f"\\n• {stamp} {t['icon'] or ''} {t['title']}: {float(t['amount'] or 0):+.2f} ETB"
+    bot.send_message(m.chat.id, msg)
 
   def s_adm_bal(m, act):
     if not is_adm(m.from_user.id): return
