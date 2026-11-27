@@ -1101,9 +1101,12 @@ async def api_dep(req: Request, x_tg_init_data: str = Header(default='')):
   try: amt = float(b.get('amount', 0))
   except (TypeError, ValueError): raise HTTPException(400, 'የገንዘብ መጠኑ ትክክል አይደለም!')
   tx = str(b.get('tx_id', '')).strip()
+  method = str(b.get('method', '')).strip()
+  if method not in ('TeleBirr', 'CBE Birr'):
+    raise HTTPException(400, 'የክፍያ ዘዴ ይምረጡ!')
   if not math.isfinite(amt) or amt < 20 or amt > 1000000 or len(tx) < 4 or len(tx) > 120:
     raise HTTPException(400, 'ዝቅተኛ 20 ETB፣ ትክክለኛ Transaction ID እና ተገቢ መጠን ያስገቡ!')
-  try: notify_req('deposit', u['uid'], amt, 'TeleBirr/CBE Birr', f'App TX: {tx}', reference=tx)
+  try: notify_req('deposit', u['uid'], amt, method, f'App TX: {tx}', reference=tx)
   except psycopg.IntegrityError: raise HTTPException(409, 'ይህ Transaction ID ቀድሞ ተጠቅሟል!')
   return {'ok': True}
 
@@ -1156,7 +1159,7 @@ async def api_wd(req: Request, x_tg_init_data: str = Header(default='')):
     if bot and ADMIN_ID:
       kb = IKB()
       kb.row(IBtn('✅ ተልኳል', callback_data=f'ap_wd_{rid}'), IBtn('❌ ሰርዝና መልስ', callback_data=f'rj_wd_{rid}'))
-      bot.send_message(ADMIN_ID, f'🔔 አዲስ የወጪ ጥያቄ!\n\n🆔 #{rid}\n👤 {u["name"]}\n📱 {u["phone"] or 'Not registered'}\n💵 {amt:.2f} ETB\n📱 {ph}', reply_markup=kb)
+      bot.send_message(ADMIN_ID, f'🔔 አዲስ የወጪ ጥያቄ!\n\n🆔 #{rid}\n👤 {u["name"]}\n📱 {u["phone"] or 'Not registered'}\n💵 {amt:.2f} ETB\n🏦 {method}\n📱 {ph}', reply_markup=kb)
   except Exception:
     pass
   return {'ok': True}
