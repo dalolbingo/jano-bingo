@@ -824,12 +824,12 @@ if bot:
           phone = p['phone'] or 'Not registered'
           name = p['name'] or 'Player'
           msg = (
-            f'💸 <b>PAYOUT #{p["id"]}</b>\\n'
-            f'👤 {name}\\n'
-            f'📱 <code>{phone}</code>\\n'
-            f'💵 <b>{float(p["amount"] or 0):.2f} ETB</b>\\n'
-            f'🏦 {p["method"] or "Unknown"}\\n'
-            f'📄 {details}\\n'
+            f'💸 <b>PAYOUT #{p["id"]}</b>\n'
+            f'👤 {name}\n'
+            f'📱 <code>{phone}</code>\n'
+            f'💵 <b>{float(p["amount"] or 0):.2f} ETB</b>\n'
+            f'🏦 {p["method"] or "Unknown"}\n'
+            f'📄 {details}\n'
             f'🕒 {stamp}'
           )
           kb = IKB()
