@@ -203,6 +203,7 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
 #loadStatus .load-spin{width:34px;height:34px;margin:0 auto 14px;border:3px solid rgba(245,158,11,.2);border-top-color:#fbbf24;border-radius:50%;animation:janoSpin .8s linear infinite}
 @keyframes janoSpin{to{transform:rotate(360deg)}}
 #loadRetry{display:none;margin-top:16px;padding:10px 20px;border:0;border-radius:99px;background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#241500;font-weight:800;font-size:14px}
+.active-stake{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.09);color:#fbbf24;border-radius:12px;padding:10px 14px;font-weight:900}
 </style>
 </head>
 <body>
@@ -276,7 +277,7 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
       <div id="statusBanner" class="status-banner">⏳ እውነተኛ ተጫዋቾች በመጠበቅ ላይ... (ቢያንስ 2 ሰው ሲገባ ይጀምራል)</div>
 
       <div class="sbar">
-        <span id="activeStakePill" class="active-stake">10 ETB ROOM</span>
+        <button id="activeStakePill" class="active-stake" type="button" onclick="changeGame()" title="Choose another game room">10 ETB ROOM</button>
         <button id="autoBtn" class="apill" onclick="toggleAuto()">⚡ Auto-Mark: ON</button>
       </div>
 
@@ -413,7 +414,7 @@ body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
   </section>
 
   <nav class="bnav">
-    <button class="nbtn on" data-t="bingo" onclick="goTab('bingo')"><span class="ni">🎮</span><span>Bingo</span></button>
+    <button class="nbtn on" data-t="bingo" onclick="changeGame()"><span class="ni">🎮</span><span>Bingo</span></button>
     <button class="nbtn" data-t="wallet" onclick="goTab('wallet')"><span class="ni">👛</span><span>WALLET</span></button>
     <button class="nbtn" data-t="history" onclick="goTab('history')"><span class="ni">🕒</span><span>HISTORY</span></button>
     <button class="nbtn" data-t="rank" onclick="goTab('rank')"><span class="ni">🏆</span><span>RANK</span></button>
