@@ -529,6 +529,8 @@ function renderState(d) {
   document.getElementById('agName').textContent = cfg.telebirr_name;
   document.getElementById('agPhone').textContent = cfg.telebirr_phone;
 
+  if (stakeSelected && Number(r.stake) !== Number(stake)) return;
+
   if (!stakeSelected) {
     document.getElementById('gameSelectView').style.display = 'block';
     document.getElementById('lobbyView').style.display = 'none';
