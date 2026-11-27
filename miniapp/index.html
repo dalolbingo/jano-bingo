@@ -49,16 +49,37 @@ body.light .wchip{color:#b45309}
 .status-banner.counting{background:rgba(245,158,11,.16);border-color:var(--bdg);color:var(--gold2)}
 body.light .status-banner{color:#1d4ed8}
 .sbar{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:6px 8px}
-.game-select{padding:18px 12px 24px;text-align:center}
-.game-select-title{font-size:23px;font-weight:1000;color:var(--gold2);margin:8px 0 6px}
-.game-select-sub{font-size:12px;color:var(--mut);margin-bottom:20px}
+.game-select{padding:10px 2px 24px;text-align:center}
+.game-hero{position:relative;overflow:hidden;padding:20px 16px 18px;margin:2px 0 18px;border:1px solid rgba(251,191,36,.35);border-radius:22px;background:radial-gradient(ellipse at 50% -15%,rgba(245,158,11,.32),transparent 65%),linear-gradient(145deg,#17243c,#0b1221 75%);box-shadow:0 14px 35px rgba(0,0,0,.3)}
+.game-hero:before,.game-hero:after{content:'';position:absolute;border-radius:50%;border:1px solid rgba(251,191,36,.14);pointer-events:none}
+.game-hero:before{width:190px;height:190px;top:-125px;left:-65px}
+.game-hero:after{width:150px;height:150px;right:-75px;bottom:-105px}
+.hero-kicker{font-size:9px;font-weight:900;letter-spacing:3px;color:#fcd34d;margin:0 0 7px}
+.game-select-title{font-size:25px;line-height:1.12;font-weight:1000;color:#fff;margin:0 0 8px;text-shadow:0 2px 16px rgba(245,158,11,.25)}
+.game-select-sub{max-width:290px;margin:0 auto;color:#bdc9dc;font-size:11.5px;line-height:1.55}
+.hero-balls{height:72px;display:flex;justify-content:center;align-items:center;gap:7px;margin:0 auto 12px;position:relative;z-index:1}
+.hero-ball{width:43px;height:43px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:1000;border:2px solid rgba(255,255,255,.55);box-shadow:inset -5px -7px 10px rgba(0,0,0,.3),0 7px 14px rgba(0,0,0,.3)}
+.hero-ball:nth-child(1),.hero-ball:nth-child(5){width:34px;height:34px;font-size:10px;opacity:.85}
+.hero-ball:nth-child(2),.hero-ball:nth-child(4){transform:translateY(-7px)}
+.hero-ball.bB{background:radial-gradient(circle at 30% 25%,#60a5fa,#1d4ed8 70%,#172554)}
+.hero-ball.bI{background:radial-gradient(circle at 30% 25%,#fb7185,#be123c 70%,#4c0519)}
+.hero-ball.bN{background:radial-gradient(circle at 30% 25%,#4ade80,#15803d 70%,#052e16)}
+.hero-ball.bG{background:radial-gradient(circle at 30% 25%,#fcd34d,#d97706 70%,#78350f)}
+.hero-ball.bO{background:radial-gradient(circle at 30% 25%,#c4b5fd,#7c3aed 70%,#3b0764)}
 .stake-options{display:grid;grid-template-columns:1fr;gap:12px}
-.stake-option{width:100%;padding:18px 16px;border:1px solid var(--bdg);border-radius:16px;background:linear-gradient(135deg,var(--card),var(--card2));color:var(--txt);display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-shadow:var(--sh);text-align:left}
+.stake-option{position:relative;overflow:hidden;width:100%;padding:14px;border:1px solid rgba(245,158,11,.24);border-radius:18px;background:linear-gradient(135deg,#17243a,#101827 72%);color:#f8fafc;display:grid;grid-template-columns:54px 1fr;gap:12px;align-items:center;box-shadow:0 9px 24px rgba(0,0,0,.24);text-align:left}
+.stake-option:before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,#fde68a,#d97706);opacity:.9}
 .stake-option:active{transform:scale(.985)}
-.stake-option .stake-amount{font-size:25px;font-weight:1000;color:var(--gold2)}
-.stake-option .stake-caption{font-size:11px;color:var(--mut);margin-top:3px}
-.stake-option .stake-arrow{font-size:24px;color:var(--gold2)}
+.stake-emblem{width:52px;height:52px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:24px;background:radial-gradient(circle at 30% 25%,rgba(251,191,36,.28),rgba(217,119,6,.08));border:1px solid rgba(251,191,36,.28)}
+.stake-info{min-width:0}
+.stake-topline{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.stake-option .stake-amount{font-size:24px;line-height:1;font-weight:1000;color:#fcd34d}
+.stake-option .stake-caption{font-size:10.5px;color:#aab8cc;margin-top:5px}
+.stake-play{grid-column:1/-1;width:100%;padding:11px 14px;border:0;border-radius:11px;background:linear-gradient(110deg,#f59e0b,#fcd34d 55%,#d97706);color:#201300;font-size:12px;font-weight:1000;letter-spacing:1px;box-shadow:0 5px 14px rgba(217,119,6,.22);cursor:pointer}
+.stake-play span{font-size:16px;vertical-align:-1px;margin-left:5px}
 .active-stake{font-size:12px;font-weight:900;color:var(--gold2);padding:5px 9px;border:1px solid var(--bdg);border-radius:8px}
+body.light .game-hero{background:radial-gradient(ellipse at 50% -15%,rgba(245,158,11,.22),transparent 65%),linear-gradient(145deg,#263b5c,#17243c)}
+body.light .stake-option{background:linear-gradient(135deg,#263b5c,#17243c)}
 .spills{display:flex;gap:5px}
 .spill{padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--card2);color:var(--mut);font-size:11px;font-weight:700;cursor:pointer}
 .spill.on{background:var(--ggrad);color:#090d16;border-color:transparent}
@@ -213,13 +234,30 @@ body.light .status-banner{color:#1d4ed8}
 
   <section id="tab-bingo" class="tab on">
     <div id="gameSelectView" class="game-select">
-      <div style="font-size:48px;margin-bottom:4px">🎱</div>
-      <div class="game-select-title">Choose Your Game</div>
-      <div class="game-select-sub">Select the amount you want to play. You will join only that stake room.</div>
+      <div class="game-hero">
+        <div class="hero-kicker">WELCOME TO THE ARENA</div>
+        <div class="hero-balls" aria-hidden="true">
+          <span class="hero-ball bB">B</span><span class="hero-ball bI">I</span><span class="hero-ball bN">N</span><span class="hero-ball bG">G</span><span class="hero-ball bO">O</span>
+        </div>
+        <div class="game-select-title">Choose Your Game</div>
+        <div class="game-select-sub">Pick your stake and jump into the action. Each amount has its own separate game room.</div>
+      </div>
       <div class="stake-options">
-        <button class="stake-option" onclick="setStake(10)"><div><div class="stake-amount">10 ETB</div><div class="stake-caption">10 Birr game room</div></div><span class="stake-arrow">›</span></button>
-        <button class="stake-option" onclick="setStake(20)"><div><div class="stake-amount">20 ETB</div><div class="stake-caption">20 Birr game room</div></div><span class="stake-arrow">›</span></button>
-        <button class="stake-option" onclick="setStake(50)"><div><div class="stake-amount">50 ETB</div><div class="stake-caption">50 Birr game room</div></div><span class="stake-arrow">›</span></button>
+        <div class="stake-option">
+          <div class="stake-emblem">🎯</div>
+          <div class="stake-info"><div class="stake-topline"><div class="stake-amount">10 ETB</div><span style="font-size:9px;font-weight:900;color:#86efac">STARTER</span></div><div class="stake-caption">10 Birr per card · 10 Birr room</div></div>
+          <button class="stake-play" onclick="setStake(10)">PLAY NOW <span>➜</span></button>
+        </div>
+        <div class="stake-option">
+          <div class="stake-emblem">🏆</div>
+          <div class="stake-info"><div class="stake-topline"><div class="stake-amount">20 ETB</div><span style="font-size:9px;font-weight:900;color:#93c5fd">CLASSIC</span></div><div class="stake-caption">20 Birr per card · 20 Birr room</div></div>
+          <button class="stake-play" onclick="setStake(20)">PLAY NOW <span>➜</span></button>
+        </div>
+        <div class="stake-option">
+          <div class="stake-emblem">👑</div>
+          <div class="stake-info"><div class="stake-topline"><div class="stake-amount">50 ETB</div><span style="font-size:9px;font-weight:900;color:#fcd34d">PREMIUM</span></div><div class="stake-caption">50 Birr per card · 50 Birr room</div></div>
+          <button class="stake-play" onclick="setStake(50)">PLAY NOW <span>➜</span></button>
+        </div>
       </div>
     </div>
     <div id="lobbyView" style="display:none">
